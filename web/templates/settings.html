@@ -1,0 +1,50 @@
+{{template "header" .}}
+<div class="container">
+
+    <!-- Global Settings & Password Change View -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">⚙️ 修改管理員帳號與密碼 (Web Authentication)</h2>
+        </div>
+        
+        {{if .Error}}
+        <div style="background-color: rgba(248, 113, 113, 0.2); border: 1px solid var(--danger); color: var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            ⚠️ {{.Error}}
+        </div>
+        {{end}}
+        
+        {{if .Message}}
+        <div style="background-color: rgba(74, 222, 128, 0.2); border: 1px solid var(--success); color: var(--success); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            ✅ {{.Message}}
+        </div>
+        {{end}}
+        
+        <form action="/settings" method="POST" style="max-width: 500px;">
+            <div class="form-group">
+                <label class="form-label">管理員帳號 (Username)</label>
+                <input type="text" name="new_username" class="form-control" value="{{.WebAuth.Username}}" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">目前舊密碼 (Current Password)</label>
+                <input type="password" name="current_password" class="form-control" required placeholder="輸入目前的舊密碼">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">新密碼 (New Password)</label>
+                <input type="password" name="new_password" class="form-control" required placeholder="輸入欲設定的新密碼">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">確認新密碼 (Confirm New Password)</label>
+                <input type="password" name="confirm_password" class="form-control" required placeholder="再次輸入新密碼">
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">💾 儲存新帳號與密碼</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{{template "footer" .}}

@@ -1,0 +1,47 @@
+{{define "footer"}}
+<script>
+    function toggleAll(master) {
+        var checkboxes = document.querySelectorAll('input[name="host_ids"]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = master.checked;
+        }
+    }
+
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme');
+        var next = (current === 'light') ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('muddns_theme', next);
+        updateThemeIcon(next);
+    }
+
+    function updateThemeIcon(theme) {
+        var btn = document.getElementById('theme-toggle');
+        if (btn) {
+            btn.innerText = (theme === 'light') ? '☀️' : '🌙';
+        }
+    }
+
+    (function() {
+        var saved = localStorage.getItem('muddns_theme');
+        if (saved) {
+            document.documentElement.setAttribute('data-theme', saved);
+            updateThemeIcon(saved);
+        } else {
+            var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+            updateThemeIcon(prefersLight ? 'light' : 'dark');
+        }
+    })();
+
+    function toggleProviderFields(pType) {
+        var fields = document.querySelectorAll('.p-fields');
+        fields.forEach(function(el) { el.style.display = 'none'; });
+        var target = document.getElementById('p-' + pType);
+        if (target) {
+            target.style.display = 'block';
+        }
+    }
+</script>
+</body>
+</html>
+{{end}}

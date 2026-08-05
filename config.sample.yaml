@@ -1,0 +1,40 @@
+settings:
+    listen: :9876
+    interval_seconds: 300
+    custom_ca_file: ""
+    insecure_skip_verify: false
+    log_file: ""
+    web_auth:
+        enabled: true
+        username: admin
+        password_hash: "$2b$10$5jtmdEsjq/e.RLoFzUPRy.o1GBmDxYIWV94BaQoBWD0/Y7/JnaENC" # default password: admin
+defaults:
+    ipv4_apis:
+        - https://ipv4.yuaner.tw/ip
+        - https://api.ipify.org
+        - https://v4.ident.me
+    ipv6_apis:
+        - https://ipv6.yuaner.tw/ip"
+        - https://api6.ipify.org
+        - https://v6.ident.me
+providers:
+    cf_demo:
+        provider: cloudflare
+        api_token: your-cloudflare-api-token
+        zone_id: your-cloudflare-zone-id
+hosts:
+    - id: host-nas
+      name: 家庭 NAS
+      enabled: true
+      provider: cf_demo
+      domains:
+        - nas.example.com
+      proxied: false
+      ipv4:
+        enabled: true
+        mode: external_api
+      ipv6:
+        enabled: true
+        mode: prefix_stitching
+        interface: eth0
+        suffix: ::100

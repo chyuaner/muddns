@@ -171,96 +171,95 @@
                 </div>
             </div>
             
-            {{range $providerID, $providerHosts := .GroupedHosts}}
-            <!-- Collapsible Group for Each DNS Provider -->
-            <details open class="provider-group">
-                <summary>
-                    <div>
-                        🔌 DNS Provider: <strong style="color: var(--primary);">{{$providerID}}</strong>
-                        <span class="badge badge-muted" style="margin-left: 8px;">{{len $providerHosts}} 台主機</span>
-                    </div>
-                </summary>
-                
-                <div class="provider-group-content">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;">選取</th>
-                                    <th>狀態</th>
-                                    <th>主機名稱</th>
-                                    <th>綁定域名</th>
-                                    <th>IPv4 (模式 & 預覽 IP)</th>
-                                    <th>IPv6 (模式 & 預覽 IP)</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{range $providerHosts}}
-                                <tr>
-                                    <td><input type="checkbox" name="host_ids" value="{{.ID}}" data-provider="{{.Provider}}" onchange="checkBatchEditStatus()"></td>
-                                    <td>
-                                        {{if .Enabled}}
-                                        <span class="badge badge-success">已啟用</span>
-                                        {{else}}
-                                        <span class="badge badge-muted">關閉</span>
-                                        {{end}}
-                                    </td>
-                                    <td><strong>{{.Name}}</strong></td>
-                                    <td>
-                                        {{range .Domains}}
-                                        <div><code>{{.}}</code></div>
-                                        {{end}}
-                                    </td>
-                                    <td>
-                                        {{if .IPv4.Enabled}}
-                                        <span class="badge badge-warning">{{.IPv4.Mode}}</span>
-                                        <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}-{{end}}</div>
-                                        {{else}}
-                                        <span class="badge badge-muted">未啟用</span>
-                                        {{end}}
-                                    </td>
-                                    <td>
-                                        {{if .IPv6.Enabled}}
-                                        <span class="badge badge-warning">{{.IPv6.Mode}}</span>
-                                        <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}-{{end}}</div>
-                                        {{else}}
-                                        <span class="badge badge-muted">未啟用</span>
-                                        {{end}}
-                                    </td>
-                                    <td>
-                                        <div style="display: flex; gap: 6px;">
-                                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleHostDetail('detail-{{.ID}}', this)">▼ 展開</button>
-                                            <a href="/hosts/edit?id={{.ID}}" class="btn btn-secondary btn-sm">編輯</a>
-                                            <a href="/logs?host_id={{.ID}}" class="btn btn-secondary btn-sm">📜 日誌</a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <!-- Expandable Detail Row -->
-                                <tr id="detail-{{.ID}}" style="display: none; background-color: var(--input-bg);">
-                                    <td colspan="7" style="padding: 16px;">
-                                        <div class="grid-2" style="font-size: 0.85rem;">
-                                            <div>
-                                                <strong style="color: var(--primary);">IPv4 詳細設定:</strong>
-                                                <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else}}eth0{{end}}</code></div>
-                                                <div>參數 / 指令: <code>{{if .IPv4.Match}}{{.IPv4.Match}}{{else if .IPv4.Offset}}{{.IPv4.Offset}}{{else if .IPv4.MAC}}{{.IPv4.MAC}}{{else if .IPv4.Command}}{{.IPv4.Command}}{{else if .IPv4.URL}}{{.IPv4.URL}}{{else}}-{{end}}</code></div>
-                                                <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code></div>
-                                            </div>
-                                            <div>
-                                                <strong style="color: var(--primary);">IPv6 詳細設定:</strong>
-                                                <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else}}eth0{{end}}</code></div>
-                                                <div>參數 / 指令: <code>{{if .IPv6.Suffix}}{{.IPv6.Suffix}}{{else if .IPv6.MAC}}{{.IPv6.MAC}}{{else if .IPv6.Match}}{{.IPv6.Match}}{{else if .IPv6.Command}}{{.IPv6.Command}}{{else if .IPv6.URL}}{{.IPv6.URL}}{{else}}-{{end}}</code></div>
-                                                <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
+            {{if .Hosts}}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                            <th>狀態</th>
+                            <th>主機名稱</th>
+                            <th>綁定域名</th>
+                            <th>IPv4 (模式 & 預覽 IP)</th>
+                            <th>IPv6 (模式 & 預覽 IP)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range $providerID, $providerHosts := .GroupedHosts}}
+                        <!-- In-Table Group Header Row (OPNsense style collapsible) -->
+                        <tr class="table-group-header" onclick="toggleTableGroup('{{$providerID}}', this)" title="點擊展開/收合此 Provider 主機群組">
+                            <td colspan="7">
+                                <span class="group-toggle-icon">▼</span>
+                                🔌 DNS Provider: <strong>{{$providerID}}</strong>
+                                <span class="badge badge-muted" style="margin-left: 8px;">{{len $providerHosts}} 台主機</span>
+                            </td>
+                        </tr>
+
+                        {{range $providerHosts}}
+                        <tr class="group-row-{{$providerID}}">
+                            <td><input type="checkbox" name="host_ids" value="{{.ID}}" data-provider="{{.Provider}}" onchange="checkBatchEditStatus()"></td>
+                            <td>
+                                {{if .Enabled}}
+                                <span class="badge badge-success">已啟用</span>
+                                {{else}}
+                                <span class="badge badge-muted">關閉</span>
                                 {{end}}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </details>
+                            </td>
+                            <td><strong>{{.Name}}</strong></td>
+                            <td>
+                                {{range .Domains}}
+                                <div><code>{{.}}</code></div>
+                                {{end}}
+                            </td>
+                            <td>
+                                {{if .IPv4.Enabled}}
+                                <span class="badge badge-warning">{{.IPv4.Mode}}</span>
+                                <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}-{{end}}</div>
+                                {{else}}
+                                <span class="badge badge-muted">未啟用</span>
+                                {{end}}
+                            </td>
+                            <td>
+                                {{if .IPv6.Enabled}}
+                                <span class="badge badge-warning">{{.IPv6.Mode}}</span>
+                                <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}-{{end}}</div>
+                                {{else}}
+                                <span class="badge badge-muted">未啟用</span>
+                                {{end}}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 6px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleHostDetail('detail-{{.ID}}', this)">▼ 展開</button>
+                                    <a href="/hosts/edit?id={{.ID}}" class="btn btn-secondary btn-sm">編輯</a>
+                                    <a href="/logs?host_id={{.ID}}" class="btn btn-secondary btn-sm">📜 日誌</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Expandable Detail Row -->
+                        <tr id="detail-{{.ID}}" class="group-row-{{$providerID}}" style="display: none; background-color: var(--input-bg);">
+                            <td colspan="7" style="padding: 16px;">
+                                <div class="grid-2" style="font-size: 0.85rem;">
+                                    <div>
+                                        <strong style="color: var(--primary);">IPv4 詳細設定:</strong>
+                                        <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else}}eth0{{end}}</code></div>
+                                        <div>參數 / 指令: <code>{{if .IPv4.Match}}{{.IPv4.Match}}{{else if .IPv4.Offset}}{{.IPv4.Offset}}{{else if .IPv4.MAC}}{{.IPv4.MAC}}{{else if .IPv4.Command}}{{.IPv4.Command}}{{else if .IPv4.URL}}{{.IPv4.URL}}{{else}}-{{end}}</code></div>
+                                        <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                    </div>
+                                    <div>
+                                        <strong style="color: var(--primary);">IPv6 詳細設定:</strong>
+                                        <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else}}eth0{{end}}</code></div>
+                                        <div>參數 / 指令: <code>{{if .IPv6.Suffix}}{{.IPv6.Suffix}}{{else if .IPv6.MAC}}{{.IPv6.MAC}}{{else if .IPv6.Match}}{{.IPv6.Match}}{{else if .IPv6.Command}}{{.IPv6.Command}}{{else if .IPv6.URL}}{{.IPv6.URL}}{{else}}-{{end}}</code></div>
+                                        <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {{end}}
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
             {{else}}
             <div class="card" style="text-align: center; color: var(--text-muted); padding: 32px;">
                 目前沒有設定任何主機，點擊上方「新增單一主機」或「新增大量主機」開始。
@@ -273,6 +272,30 @@
 </div>
 
 <script>
+function toggleTableGroup(providerId, headerRow) {
+    var rows = document.querySelectorAll('.group-row-' + providerId);
+    var icon = headerRow.querySelector('.group-toggle-icon');
+    var isCollapsed = headerRow.classList.contains('collapsed');
+
+    if (isCollapsed) {
+        headerRow.classList.remove('collapsed');
+        if (icon) icon.innerText = '▼';
+        rows.forEach(function(r) {
+            if (r.id && r.id.startsWith('detail-')) {
+                r.style.display = 'none';
+            } else {
+                r.style.display = 'table-row';
+            }
+        });
+    } else {
+        headerRow.classList.add('collapsed');
+        if (icon) icon.innerText = '►';
+        rows.forEach(function(r) {
+            r.style.display = 'none';
+        });
+    }
+}
+
 function toggleHostDetail(rowId, btn) {
     var row = document.getElementById(rowId);
     if (!row) return;

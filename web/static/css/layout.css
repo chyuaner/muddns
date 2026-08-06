@@ -230,36 +230,32 @@ tr:last-child td { border-bottom: none; }
     transition: opacity 0.2s ease, filter 0.2s ease;
 }
 
-/* DNS Provider 展開/收合群組卡片 (Provider Group Collapsible) */
-.provider-group {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 20px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+/* OPNsense 風格表格內 DNS Provider 群組標頭行 (In-Table Group Header) */
+.table-group-header {
+    cursor: pointer;
+    user-select: none;
 }
 
-.provider-group summary {
-    padding: 12px 18px;
-    background-color: var(--table-header-bg);
+.table-group-header td {
+    background-color: var(--input-bg);
     font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    list-style: none;
-    user-select: none;
-    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    padding: 10px 16px !important;
+    border-top: 2px solid var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-color);
     transition: background-color 0.15s ease;
 }
 
-.provider-group summary:hover {
+.table-group-header:hover td {
     background-color: var(--border-color);
 }
 
-.provider-group summary::-webkit-details-marker {
-    display: none;
-}
-
-.provider-group-content {
-    padding: 16px;
+.group-toggle-icon {
+    display: inline-block;
+    width: 16px;
+    font-size: 0.8rem;
+    color: var(--primary);
+    margin-right: 6px;
+    transition: transform 0.15s ease;
 }

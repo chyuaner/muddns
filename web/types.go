@@ -35,6 +35,7 @@ type PageData struct {
 	CommonIPv6Interface string                     `json:"common_ipv6_interface"` // 批量通用 IPv6 介面
 	BatchRows           []BatchRow                 `json:"batch_rows"`            // 批量編輯的主機資料列
 	Logs                []logger.LogEntry          `json:"logs"`                  // 系統日誌列表
+	Settings            config.Settings            `json:"settings"`              // 全域系統設定
 	WebAuth             config.WebAuth             `json:"web_auth"`              // 系統認證設定
 	Message             string                     `json:"message"`               // 前端提示訊息 (綠色/黃色)
 	Error               string                     `json:"error"`                 // 前端錯誤訊息 (紅色)

@@ -1,50 +1,111 @@
 {{template "header" .}}
 <div class="container">
 
-    <!-- Global Settings & Password Change View -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">⚙️ 修改管理員帳號與密碼 (Web Authentication)</h2>
+    <form action="/settings" method="POST">
+        <!-- 1. 全域系統與網路設定 (System & Network Settings) -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚙️ 全域系統與網路設定 (System & Network)</h2>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Web UI 監聽位址與埠 (Listen)</label>
+                    <input type="text" name="listen" class="form-control" value="{{.Settings.Listen}}" required placeholder=":9876">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">背景輪詢間隔秒數 (Interval Seconds)</label>
+                    <input type="number" name="interval_seconds" class="form-control" value="{{.Settings.IntervalSeconds}}" required placeholder="300">
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">預設 IPv4 網卡介面 (Default IPv4 Interface)</label>
+                    <input type="text" name="default_ipv4_interface" class="form-control" value="{{.Settings.DefaultIPv4Interface}}" placeholder="eth0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">預設 IPv6 網卡介面 (Default IPv6 Interface)</label>
+                    <input type="text" name="default_ipv6_interface" class="form-control" value="{{.Settings.DefaultIPv6Interface}}" placeholder="eth0">
+                </div>
+            </div>
         </div>
-        
-        {{if .Error}}
-        <div style="background-color: rgba(248, 113, 113, 0.2); border: 1px solid var(--danger); color: var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-            ⚠️ {{.Error}}
+
+        <!-- 2. 安全性、API 與日誌設定 (API & Security) -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🔑 安全性、API 與日誌設定 (API & Security)</h2>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">HTTP API 觸發認證 Token (API Auth Token)</label>
+                    <input type="text" name="apiauth" class="form-control" value="{{.Settings.APIAuth}}" placeholder="例如: 5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0 (留空免驗證)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">實體日誌檔案路徑 (Log File Path)</label>
+                    <input type="text" name="log_file" class="form-control" value="{{.Settings.LogFile}}" placeholder="例如: muddns.log (留空僅輸出至 Console)">
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">自訂 CA 憑證檔案路徑 (Custom CA File)</label>
+                    <input type="text" name="custom_ca_file" class="form-control" value="{{.Settings.CustomCAFile}}" placeholder="例如: /etc/ssl/certs/my_ca.crt">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">不安全性跳過 TLS 憑證驗證 (Insecure Skip Verify)</label>
+                    <select name="insecure_skip_verify" class="form-control">
+                        <option value="false" {{if not .Settings.InsecureSkipVerify}}selected{{end}}>否 (False - 預設進行 TLS 嚴格驗證)</option>
+                        <option value="true" {{if .Settings.InsecureSkipVerify}}selected{{end}}>是 (True - 跳過憑證驗證)</option>
+                    </select>
+                </div>
+            </div>
         </div>
-        {{end}}
-        
-        {{if .Message}}
-        <div style="background-color: rgba(74, 222, 128, 0.2); border: 1px solid var(--success); color: var(--success); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-            ✅ {{.Message}}
+
+        <!-- 3. Web UI 身份驗證與密碼變更 (Web Authentication & Password) -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🔐 Web UI 身份驗證與密碼變更 (Web Auth)</h2>
+            </div>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">啟用 Web UI 認證 (Enable BasicAuth)</label>
+                    <select name="web_auth_enabled" class="form-control">
+                        <option value="true" {{if .Settings.WebAuth.Enabled}}selected{{end}}>啟用 (True - 需輸入帳號密碼)</option>
+                        <option value="false" {{if not .Settings.WebAuth.Enabled}}selected{{end}}>停用 (False - 無密碼存取)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">管理員帳號 (Username)</label>
+                    <input type="text" name="new_username" class="form-control" value="{{.Settings.WebAuth.Username}}" required>
+                </div>
+            </div>
+            
+            <hr style="border-color: var(--border-color); margin: 16px 0;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">修改密碼（若不欲變更密碼，下欄請留空）：</p>
+            
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">目前舊密碼 (Current Password)</label>
+                    <input type="password" name="current_password" class="form-control" placeholder="欲變更密碼時需輸入舊密碼">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密碼 (New Password)</label>
+                    <input type="password" name="new_password" class="form-control" placeholder="新密碼 (不修改請留空)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">確認新密碼 (Confirm Password)</label>
+                    <input type="password" name="confirm_password" class="form-control" placeholder="再次輸入新密碼">
+                </div>
+            </div>
         </div>
-        {{end}}
-        
-        <form action="/settings" method="POST" style="max-width: 500px;">
-            <div class="form-group">
-                <label class="form-label">管理員帳號 (Username)</label>
-                <input type="text" name="new_username" class="form-control" value="{{.WebAuth.Username}}" required>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">目前舊密碼 (Current Password)</label>
-                <input type="password" name="current_password" class="form-control" required placeholder="輸入目前的舊密碼">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">新密碼 (New Password)</label>
-                <input type="password" name="new_password" class="form-control" required placeholder="輸入欲設定的新密碼">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">確認新密碼 (Confirm New Password)</label>
-                <input type="password" name="confirm_password" class="form-control" required placeholder="再次輸入新密碼">
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <button type="submit" class="btn btn-primary">💾 儲存新帳號與密碼</button>
-            </div>
-        </form>
-    </div>
+
+        <div style="margin-bottom: 30px;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 24px; font-size: 1rem;">💾 儲存全域系統設定</button>
+        </div>
+    </form>
 
 </div>
 {{template "footer" .}}

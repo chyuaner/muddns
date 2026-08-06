@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"muddns/config"
@@ -753,59 +754,90 @@ func (s *Server) handleConfigRaw(w http.ResponseWriter, r *http.Request) {
 	s.renderTemplate(w, "config_raw.html", data)
 }
 
-// handleSettings 處理全域密碼變更與設定 (/settings)
+// handleSettings 處理全域系統設定與密碼變更 (/settings)
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	data := PageData{
 		ActiveTab: "settings",
+		Settings:  s.cfg.Settings,
 		WebAuth:   s.cfg.Settings.WebAuth,
 	}
 
 	if r.Method == "POST" {
 		r.ParseForm()
-		currentPassword := r.FormValue("current_password")
+
+		// 1. 讀取並更新 settings 全域設定
+		listen := strings.TrimSpace(r.FormValue("listen"))
+		if listen != "" {
+			s.cfg.Settings.Listen = listen
+		}
+
+		if intervalStr := r.FormValue("interval_seconds"); intervalStr != "" {
+			if sec, err := strconv.Atoi(intervalStr); err == nil && sec > 0 {
+				s.cfg.Settings.IntervalSeconds = sec
+			}
+		}
+
+		s.cfg.Settings.DefaultIPv4Interface = strings.TrimSpace(r.FormValue("default_ipv4_interface"))
+		s.cfg.Settings.DefaultIPv6Interface = strings.TrimSpace(r.FormValue("default_ipv6_interface"))
+		s.cfg.Settings.APIAuth = strings.TrimSpace(r.FormValue("apiauth"))
+		s.cfg.Settings.CustomCAFile = strings.TrimSpace(r.FormValue("custom_ca_file"))
+		s.cfg.Settings.InsecureSkipVerify = r.FormValue("insecure_skip_verify") == "true"
+		s.cfg.Settings.LogFile = strings.TrimSpace(r.FormValue("log_file"))
+		s.cfg.Settings.WebAuth.Enabled = r.FormValue("web_auth_enabled") == "true"
+
+		// 2. 處理 WebAuth 帳號與密碼變更
 		newUsername := strings.TrimSpace(r.FormValue("new_username"))
-		newPassword := r.FormValue("new_password")
-		confirmPassword := r.FormValue("confirm_password")
-
-		if !s.cfg.Settings.WebAuth.VerifyPassword(currentPassword) {
-			data.Error = "目前舊密碼不正確！"
-			s.renderTemplate(w, "settings.html", data)
-			return
-		}
-
-		if newPassword == "" {
-			data.Error = "新密碼不能為空！"
-			s.renderTemplate(w, "settings.html", data)
-			return
-		}
-
-		if newPassword != confirmPassword {
-			data.Error = "兩次輸入的新密碼不一致！"
-			s.renderTemplate(w, "settings.html", data)
-			return
-		}
-
-		newHash, err := config.HashPassword(newPassword)
-		if err != nil {
-			data.Error = fmt.Sprintf("密碼加密失敗: %v", err)
-			s.renderTemplate(w, "settings.html", data)
-			return
-		}
-
 		if newUsername != "" {
 			s.cfg.Settings.WebAuth.Username = newUsername
 		}
-		s.cfg.Settings.WebAuth.PasswordHash = newHash
 
+		currentPassword := r.FormValue("current_password")
+		newPassword := r.FormValue("new_password")
+		confirmPassword := r.FormValue("confirm_password")
+
+		// 若使用者有輸入新密碼，進行舊密碼校驗與新密碼雜湊更新
+		if newPassword != "" {
+			if s.cfg.Settings.WebAuth.Enabled && !s.cfg.Settings.WebAuth.VerifyPassword(currentPassword) {
+				data.Settings = s.cfg.Settings
+				data.WebAuth = s.cfg.Settings.WebAuth
+				data.Error = "目前舊密碼不正確！無法修改密碼。"
+				s.renderTemplate(w, "settings.html", data)
+				return
+			}
+
+			if newPassword != confirmPassword {
+				data.Settings = s.cfg.Settings
+				data.WebAuth = s.cfg.Settings.WebAuth
+				data.Error = "兩次輸入的新密碼不一致！"
+				s.renderTemplate(w, "settings.html", data)
+				return
+			}
+
+			newHash, err := config.HashPassword(newPassword)
+			if err != nil {
+				data.Settings = s.cfg.Settings
+				data.WebAuth = s.cfg.Settings.WebAuth
+				data.Error = fmt.Sprintf("密碼加密失敗: %v", err)
+				s.renderTemplate(w, "settings.html", data)
+				return
+			}
+
+			s.cfg.Settings.WebAuth.PasswordHash = newHash
+		}
+
+		// 3. 儲存至實體 config.yaml
 		if err := s.cfg.Save(s.configPath); err != nil {
+			data.Settings = s.cfg.Settings
+			data.WebAuth = s.cfg.Settings.WebAuth
 			data.Error = fmt.Sprintf("儲存設定檔失敗: %v", err)
 			s.renderTemplate(w, "settings.html", data)
 			return
 		}
 
-		logger.Log(logger.SUCCESS, "", "管理員帳號密碼已成功更新！")
+		logger.Log(logger.SUCCESS, "", "全域系統設定已成功儲存與更新！")
+		data.Settings = s.cfg.Settings
 		data.WebAuth = s.cfg.Settings.WebAuth
-		data.Message = "管理員帳號與密碼已成功更新！下次登入請使用新密碼。"
+		data.Message = "全域系統設定已成功更新並寫入 config.yaml！"
 	}
 
 	s.renderTemplate(w, "settings.html", data)

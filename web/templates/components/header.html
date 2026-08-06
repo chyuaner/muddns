@@ -18,6 +18,7 @@
         var enableLocalStorage = false; // 內部開關：是否將主題偏好記錄至 localStorage (預設關閉)
 
         (function() {
+            document.documentElement.classList.add('js-enabled');
             if (enableLocalStorage) {
                 var savedTheme = localStorage.getItem('theme');
                 if (savedTheme === 'dark' || savedTheme === 'light') {

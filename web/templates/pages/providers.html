@@ -6,7 +6,7 @@
     <dialog id="provider-modal" class="card host-dialog" open>
         <div class="modal-header">
             <h3>{{if .EditProviderID}}✏️ 編輯 DNS 服務商: {{.EditProviderID}}{{else}}➕ 新增 DNS 服務商{{end}}</h3>
-            <button type="button" class="btn-close" onclick="closeProviderModal()" title="關閉對話框">✕</button>
+            <a href="/providers" class="btn-close" onclick="closeProviderModal(event)" title="關閉對話框">✕</a>
         </div>
         
         <form action="/providers/save" method="POST" style="padding: 20px;">
@@ -78,7 +78,7 @@
             </div>
             
             <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
-                <button type="button" class="btn btn-secondary" onclick="closeProviderModal()">取消</button>
+                <a href="/providers" class="btn btn-secondary" onclick="closeProviderModal(event)">取消</a>
                 <button type="submit" class="btn btn-primary">💾 儲存 DNS 服務商</button>
             </div>
         </form>
@@ -148,15 +148,14 @@
     }
 })();
 
-function closeProviderModal() {
+function closeProviderModal(e) {
     var modal = document.getElementById('provider-modal');
     if (modal && typeof modal.close === 'function') {
+        if (e && e.preventDefault) e.preventDefault();
         modal.close();
-    } else if (modal) {
-        modal.style.display = 'none';
-    }
-    if (window.history && window.history.pushState) {
-        window.history.pushState({}, '', '/providers');
+        if (window.history && window.history.pushState) {
+            window.history.pushState({}, '', '/providers');
+        }
     }
 }
 </script>

@@ -272,6 +272,15 @@ tr:last-child td { border-bottom: none; }
     font-size: 0.85rem;
 }
 
+/* 漸進增強：僅在 JS 啟用時顯示的互動按鈕與圖示 */
+.js-only {
+    display: none !important;
+}
+
+.js-enabled .js-only {
+    display: inline-block !important;
+}
+
 /* 視覺「偽 Disabled」狀態 (視覺變灰但不鎖定修改) */
 .pseudo-disabled {
     opacity: 0.45;
@@ -281,8 +290,11 @@ tr:last-child td { border-bottom: none; }
 
 /* OPNsense 風格表格內 DNS Provider 群組標頭行 (In-Table Group Header) */
 .table-group-header {
-    cursor: pointer;
     user-select: none;
+}
+
+.js-enabled .table-group-header {
+    cursor: pointer;
 }
 
 .table-group-header td {
@@ -296,7 +308,7 @@ tr:last-child td { border-bottom: none; }
     transition: background-color 0.15s ease;
 }
 
-.table-group-header:hover td {
+.js-enabled .table-group-header:hover td {
     background-color: var(--border-color);
 }
 
@@ -348,8 +360,12 @@ tr:last-child td { border-bottom: none; }
 }
 
 /* ═══════════════════════════════════════════════════════
-   2. HTML5 <dialog> 對話框與 Modal 動畫
+   2. HTML5 <dialog> 對話框與老舊瀏覽器/無JS降級相容
    ═══════════════════════════════════════════════════════ */
+dialog:not([open]) {
+    display: none !important;
+}
+
 dialog.host-dialog {
     border: 1px solid var(--card-border, var(--border-color));
     border-radius: 0.75rem;

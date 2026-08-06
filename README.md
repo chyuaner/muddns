@@ -4,6 +4,20 @@
 
 ---
 
+## 💡 本專案解決痛點
+
+現行大部分常見的 DDNS 工具（如 ddns-go、Inadyn 等）大多設計為**「單機自我更新模式」**——即預設僅能取得並更新「執行該程式當下本機」的公網 IP。然而在現代網路與家庭實驗室 (HomeLab) 環境中，這種設計會遇到以下兩大重大痛點：
+
+1. **IPv6 前綴變更與內網多主機批量更新痛點 (SLAAC / Prefix Delegation)**：
+   家用動態 IPv6（如中華電信 PPPoE 浮動 `/56` 或 `/64` 前綴）每次重撥都會改變前綴，而內網中的 NAS、PVE 虛擬機、樹莓派與 Docker 容器皆各自擁有獨立的公網 IPv6 位址。若為每台裝置分別安裝用戶端，不僅維護極度繁瑣，且在 SLAAC 環境下難以運作。
+   👉 **`muddns` 的解法**：只需在路由器/閘道器（如 OPNsense / RouterOS）或單一核心伺服器上部署 `muddns`，即可自動擷取 WAN 動態前綴，並透過「固定後綴拼接 (`prefix_stitching`)」、「EUI-64 MAC 自動換算 (`eui64_mac`)」或「ARP 鄰居表探測」，**由單一服務集中計算並批量更新內網所有 IPv6 裝置的 DNS 紀錄**。
+
+2. **跨主機與多網卡集中化管理需求 (Centralized Multi-Host DDNS)**：
+   傳統工具無法在一台機器上集中控管分散在不同網卡 (Dual WAN / PPPoE)、不同子網段甚至遠端節點的多台主機 DNS。
+   👉 **`muddns` 的解法**：提供集中式主機清單（支援 OPNsense 風格 CSV 批量匯入/匯出）、指定網卡介面獨立觸發 (`-i pppoe1` / `?interface=pppoe1`) 與自訂 Bash 指令模式 (`command`)，**讓單一 `muddns` 實例成為全網的集中化 DDNS 控制中心**。
+
+---
+
 ## 🌟 核心特色
 
 - **雙重與多維觸發模式 (Dual & Multi-Trigger Mode)**：
@@ -12,7 +26,7 @@
   - **🌐 HTTP API 遠端觸發 (`GET / POST /api/sync`)**：專為 OPNsense / pfSense / RouterOS 重撥或 WAN 介面重連事件 (devd / newwanip) 設計，支援 `curl` 傳入驗證 Token (`auth`) 與網卡介面過濾 (`interface=pppoe1`)。
   - **⚙️ Linux Systemd 常駐服務 (`service install / uninstall`)**：比照 `ddns-go` 支援一鍵將 muddns 註冊、啟動或移除為 Linux 常駐服務。
 - **純淨初始化 (Zero-Dependency Auto-Init)**：未檢測到 `config.yaml` 時由程式自動生成乾淨極簡的純淨設定檔（預設 `admin/admin` 帳號密碼），不預填示範主機，`config.sample.yaml` 轉為純粹參考範例。
-- **全新 Bash 指令模式 (`command`)**：支援填入自訂 Shell/Bash 命令（例如 `curl`, `ip addr`, `awk` 等），自動解析 stdout 輸出作為 IPv4 或 IPv6 位位址。
+- **全新 Bash 指令模式 (`command`)**：支援填入自訂 Shell/Bash 命令（例如 `curl`, `ip addr`, `awk` 等），自動解析 stdout 輸出作為 IPv4 或 IPv6 位址。
 - **漸進增強 Web UI (SSR + HTMX + Vanilla CSS)**：
   - **無 JS 降級完全相容 (No-JS Fallback)**：所有選單、對話框與表單均可在關閉 JavaScript 的環境下原生運作！對話框關閉/取消按鈕使用原生超連結 `<a>`，並透過 `.js-only` 自動於無 JS 環境下隱藏純 JS 互動按鈕。
   - **舊版瀏覽器友善 (Progressive Enhancement)**：針對不支援 HTML5 `<dialog>` 標籤的老舊瀏覽器（如舊版 Safari、Android Webview），自動透過漸進降級 CSS 轉為頂部卡片樣式呈現，確保 100% 瀏覽器跨平台相容。

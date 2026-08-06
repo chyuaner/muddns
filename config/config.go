@@ -20,12 +20,14 @@ type Config struct {
 
 // Settings 系統全域參數設定
 type Settings struct {
-	Listen             string  `yaml:"listen"`               // Web UI 監聽埠 (例: :9876)
-	IntervalSeconds    int     `yaml:"interval_seconds"`     // 輪詢更新間隔秒數 (例: 300)
-	CustomCAFile       string  `yaml:"custom_ca_file"`       // 自訂 CA 憑證檔案路徑
-	InsecureSkipVerify bool    `yaml:"insecure_skip_verify"` // 是否跳過 TLS 憑證驗證
-	LogFile            string  `yaml:"log_file"`             // 實體日誌檔案路徑
-	WebAuth            WebAuth `yaml:"web_auth"`             // Web UI 帳號密碼認證設定
+	Listen               string  `yaml:"listen"`                         // Web UI 監聽埠 (例: :9876)
+	IntervalSeconds      int     `yaml:"interval_seconds"`               // 輪詢更新間隔秒數 (例: 300)
+	DefaultIPv4Interface string  `yaml:"default_ipv4_interface,omitempty"` // 預設 IPv4 網卡介面 (例: eth0)
+	DefaultIPv6Interface string  `yaml:"default_ipv6_interface,omitempty"` // 預設 IPv6 網卡介面 (例: eth0)
+	CustomCAFile         string  `yaml:"custom_ca_file,omitempty"`       // 自訂 CA 憑證檔案路徑
+	InsecureSkipVerify   bool    `yaml:"insecure_skip_verify,omitempty"` // 是否跳過 TLS 憑證驗證
+	LogFile              string  `yaml:"log_file,omitempty"`             // 實體日誌檔案路徑
+	WebAuth              WebAuth `yaml:"web_auth"`                       // Web UI 帳號密碼認證設定
 }
 
 // WebAuth Web 管理介面認證參數
@@ -130,6 +132,12 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if cfg.Settings.IntervalSeconds <= 0 {
 		cfg.Settings.IntervalSeconds = 300
+	}
+	if cfg.Settings.DefaultIPv4Interface == "" {
+		cfg.Settings.DefaultIPv4Interface = "eth0"
+	}
+	if cfg.Settings.DefaultIPv6Interface == "" {
+		cfg.Settings.DefaultIPv6Interface = "eth0"
 	}
 
 	return cfg, nil

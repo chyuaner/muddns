@@ -89,12 +89,30 @@ muddns/
 
 #### 單次觸發同步 (Crontab / 腳本專用)
 ```bash
+# 同步更新全部啟用的主機
 ./muddns sync -c config.yaml
+
+# 指定僅同步特定 Host ID
+./muddns sync -c config.yaml -h host-nas
+```
+
+#### 🔀 雙 WAN 網卡獨立同步 (-i, --interface)
+適合搭配 OPNsense / pfSense / RouterOS 重撥或介面重連事件觸發：
+```bash
+# 僅同步綁定 pppoe0 網卡介面的主機 (沒綁定 pppoe0 的主機自動跳過)
+./muddns sync -c config.yaml -i pppoe0
+
+# 完整參數寫法
+./muddns sync -c config.yaml --interface pppoe1
 ```
 
 #### Dry-run 測試與排錯 (計算 IP 但不上傳 DNS)
 ```bash
+# 乾跑計算全部主機 IP
 ./muddns status
+
+# 僅乾跑檢測指定網卡介面的主機
+./muddns status -i eth0
 ```
 
 #### 開啟詳細除錯模式
@@ -104,11 +122,26 @@ muddns/
 
 ---
 
-## 📅 Crontab 設定範例
+## 📅 Crontab 與 OPNsense 整合範例
 
+### 1. Crontab 定時排程
 若希望完全關閉背景服務，每 5 分鐘由 `cron` 觸發單次更新：
 ```bash
 */5 * * * * /usr/local/bin/muddns sync -c /etc/muddns/config.yaml > /dev/null 2>&1
+```
+
+### 2. OPNsense / pfSense 雙 WAN 介面重連事件腳本 (WAN Reconnect Event Hook)
+當雙 WAN 網路中特定介面（如 `pppoe0`）斷線重連時，在腳本中呼叫帶 `-i` 參數的指令，即可精準僅更新該 WAN 關聯的主機：
+```bash
+#!/bin/sh
+# $1 為網卡介面名稱 (例如 pppoe0)
+INTERFACE=$1
+
+if [ -n "$INTERFACE" ]; then
+    /usr/local/bin/muddns sync -c /etc/muddns/config.yaml -i "$INTERFACE"
+else
+    /usr/local/bin/muddns sync -c /etc/muddns/config.yaml
+fi
 ```
 
 ---
@@ -119,6 +152,8 @@ muddns/
 settings:
   listen: ":9876"
   interval_seconds: 300
+  default_ipv4_interface: "eth0" # 預設 IPv4 網卡介面
+  default_ipv6_interface: "eth0" # 預設 IPv6 網卡介面
   web_auth:
     enabled: true
     username: "admin"

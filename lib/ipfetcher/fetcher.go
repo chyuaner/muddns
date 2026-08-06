@@ -18,13 +18,19 @@ import (
 //   - isIPv6: 標示當前計算是否為 IPv6 策略
 //   - defaults: 預設外網 Echo API 清單
 //   - hostID: 關聯的主機識別名稱
+//   - defaultIface: (可選) 設定檔或 CLI 指定的預設網卡介面 (例如: eth0, pppoe0)
 //
 // 回傳:
 //   - string: 計算所得的 IP 字串
 //   - error: 計算過程發生的錯誤
-func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID string) (string, error) {
+func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID string, defaultIface ...string) (string, error) {
 	if !ipCfg.Enabled {
 		return "", nil
+	}
+
+	fallbackIface := "eth0"
+	if len(defaultIface) > 0 && strings.TrimSpace(defaultIface[0]) != "" {
+		fallbackIface = strings.TrimSpace(defaultIface[0])
 	}
 
 	switch ipCfg.Mode {
@@ -59,7 +65,7 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 		// 直接自指定網卡介面讀取 IP
 		iface := ipCfg.Interface
 		if iface == "" {
-			iface = "eth0"
+			iface = fallbackIface
 		}
 		return FetchInterfaceIP(iface, ipCfg.Match, isIPv6)
 
@@ -70,7 +76,7 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 		}
 		iface := ipCfg.Interface
 		if iface == "" {
-			iface = "eth0"
+			iface = fallbackIface
 		}
 		baseIP, err := FetchInterfaceIP(iface, "", false)
 		if err != nil {
@@ -92,7 +98,7 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 		}
 		iface := ipCfg.Interface
 		if iface == "" {
-			iface = "eth0"
+			iface = fallbackIface
 		}
 		prefixIP, err := FetchInterfaceIP(iface, "", true)
 		if err != nil {
@@ -111,7 +117,7 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 		}
 		iface := ipCfg.Interface
 		if iface == "" {
-			iface = "eth0"
+			iface = fallbackIface
 		}
 		prefixIP, err := FetchInterfaceIP(iface, "", true)
 		if err != nil {

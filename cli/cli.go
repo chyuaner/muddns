@@ -35,15 +35,19 @@ func Run(version string) {
 	targetHost := cmdFlags.String("h", "", "指定僅同步特定 Host ID (適用於 sync 命令)")
 	debug := cmdFlags.Bool("debug", false, "是否開啟 Verbose Debug 日誌輸出")
 
+	var filterIface string
+	cmdFlags.StringVar(&filterIface, "interface", "", "指定僅更新綁定特定網卡介面的主機 (例: eth0, pppoe0) (簡寫: -i)")
+	cmdFlags.StringVar(&filterIface, "i", "", "指定僅更新綁定特定網卡介面的主機 (簡寫)")
+
 	_ = cmdFlags.Parse(os.Args[2:])
 
 	switch command {
 	case "serve":
 		runServe(*configPath, *debug)
 	case "sync":
-		runSync(*configPath, *targetHost, *debug)
+		runSync(*configPath, *targetHost, filterIface, *debug)
 	case "status":
-		runStatus(*configPath, *debug)
+		runStatus(*configPath, filterIface, *debug)
 	case "version":
 		fmt.Printf("muddns 版本: %s\n", version)
 	default:
@@ -60,13 +64,14 @@ func printUsage() {
 	fmt.Println("  muddns <command> [options]")
 	fmt.Println("\n可用子命令:")
 	fmt.Println("  serve      啟動背景輪詢更新服務並開啟 Web 管理介面")
-	fmt.Println("  sync       執行單次即時 DNS 同步更新 (適合搭配 cron 執行)")
+	fmt.Println("  sync       執行單次即時 DNS 同步更新 (適合搭配 cron 或 OPNsense WAN 重新連線腳本觸發)")
 	fmt.Println("  status     計算並列出所有主機當前的 IP (乾跑測試，不實際修改 DNS)")
 	fmt.Println("  version    顯示 muddns 版本號")
 	fmt.Println("\n常用選項:")
-	fmt.Println("  -c <path>  指定設定檔路徑 (預設: config.yaml)")
-	fmt.Println("  -h <host>  指定僅更新特定主機 ID (適用於 sync 命令)")
-	fmt.Println("  -debug     開啟詳細除錯日誌模式")
+	fmt.Println("  -c <path>         指定設定檔路徑 (預設: config.yaml)")
+	fmt.Println("  -i, --interface   僅同步綁定指定網卡介面的主機 (例: -i pppoe0，未指定時更新全部)")
+	fmt.Println("  -h <host>         指定僅更新特定主機 ID (適用於 sync 命令)")
+	fmt.Println("  -debug            開啟詳細除錯日誌模式")
 }
 
 // runServe 啟動背景 Web UI 伺服器與定時輪詢 Task
@@ -111,9 +116,9 @@ func runServe(configPath string, debug bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 啟動時立即執行首次同步
+	// 啟動時執行首次同步
 	logger.Log(logger.INFO, "", "啟動時執行首次 DNS 同步檢查...")
-	syncAllHosts(ctx, cfg, configPath)
+	syncAllHosts(ctx, cfg, configPath, "")
 
 	for {
 		select {
@@ -123,7 +128,7 @@ func runServe(configPath string, debug bool) {
 				cfg = reloadedCfg
 			}
 			logger.Log(logger.INFO, "", "觸發定時輪詢 DNS 同步...")
-			syncAllHosts(ctx, cfg, configPath)
+			syncAllHosts(ctx, cfg, configPath, "")
 
 		case sig := <-sigChan:
 			logger.Log(logger.INFO, "", "接收到關閉訊號 (%v)，準備安全關閉服務器...", sig)
@@ -137,7 +142,7 @@ func runServe(configPath string, debug bool) {
 }
 
 // runSync 執行單次即時 DNS 更新
-func runSync(configPath string, targetHost string, debug bool) {
+func runSync(configPath string, targetHost string, filterIface string, debug bool) {
 	logger.VerboseDebug = debug
 
 	cfg, err := config.LoadConfig(configPath)
@@ -148,7 +153,12 @@ func runSync(configPath string, targetHost string, debug bool) {
 
 	setupSystemCAs(cfg.Settings.CustomCAFile, cfg.Settings.InsecureSkipVerify)
 
+	if filterIface != "" {
+		logger.Log(logger.INFO, "", "指定網卡介面篩選: %s (僅同步綁定此介面的主機)", filterIface)
+	}
+
 	ctx := context.Background()
+	syncedCount := 0
 	for _, h := range cfg.Hosts {
 		if !h.Enabled {
 			continue
@@ -156,15 +166,17 @@ func runSync(configPath string, targetHost string, debug bool) {
 		if targetHost != "" && h.ID != targetHost {
 			continue
 		}
-		syncHost(ctx, cfg, h)
+		if syncHost(ctx, cfg, h, filterIface) {
+			syncedCount++
+		}
 	}
 
 	cfg.Save(configPath)
-	fmt.Println("[SUCCESS] 單次同步完成。")
+	fmt.Printf("[SUCCESS] 單次同步完成。共處理 %d 台主機。\n", syncedCount)
 }
 
 // runStatus 執行乾跑 (Dry Run) 測試，列出算得 IP 而不修改 DNS
-func runStatus(configPath string, debug bool) {
+func runStatus(configPath string, filterIface string, debug bool) {
 	logger.VerboseDebug = debug
 
 	cfg, err := config.LoadConfig(configPath)
@@ -173,15 +185,36 @@ func runStatus(configPath string, debug bool) {
 		os.Exit(1)
 	}
 
+	if filterIface != "" {
+		fmt.Printf("[+] 指定網卡介面篩選: %s\n", filterIface)
+	}
+
 	fmt.Printf("\n[+] 載入設定檔: %s\n", configPath)
 	fmt.Println("==========================================================================================")
 	fmt.Printf("%-12s %-18s %-25s %-25s\n", "Host ID", "Name", "IPv4 (Calculated)", "IPv6 (Calculated)")
 	fmt.Println("==========================================================================================")
 
 	for _, h := range cfg.Hosts {
+		// 檢查介面篩選
+		v4Iface := h.IPv4.Interface
+		if v4Iface == "" {
+			v4Iface = cfg.Settings.DefaultIPv4Interface
+		}
+		v6Iface := h.IPv6.Interface
+		if v6Iface == "" {
+			v6Iface = cfg.Settings.DefaultIPv6Interface
+		}
+
+		v4Matches := h.IPv4.Enabled && (filterIface == "" || v4Iface == filterIface)
+		v6Matches := h.IPv6.Enabled && (filterIface == "" || v6Iface == filterIface)
+
+		if filterIface != "" && !v4Matches && !v6Matches {
+			continue
+		}
+
 		ip4 := "-"
-		if h.IPv4.Enabled {
-			res, err := ipfetcher.ResolveIP(h.IPv4, false, cfg.Defaults.IPv4APIs, h.ID)
+		if v4Matches {
+			res, err := ipfetcher.ResolveIP(h.IPv4, false, cfg.Defaults.IPv4APIs, h.ID, cfg.Settings.DefaultIPv4Interface)
 			if err == nil {
 				ip4 = res + " (" + h.IPv4.Mode + ")"
 			} else {
@@ -190,8 +223,8 @@ func runStatus(configPath string, debug bool) {
 		}
 
 		ip6 := "-"
-		if h.IPv6.Enabled {
-			res, err := ipfetcher.ResolveIP(h.IPv6, true, cfg.Defaults.IPv6APIs, h.ID)
+		if v6Matches {
+			res, err := ipfetcher.ResolveIP(h.IPv6, true, cfg.Defaults.IPv6APIs, h.ID, cfg.Settings.DefaultIPv6Interface)
 			if err == nil {
 				ip6 = res + " (" + h.IPv6.Mode + ")"
 			} else {
@@ -206,33 +239,49 @@ func runStatus(configPath string, debug bool) {
 }
 
 // syncAllHosts 遍歷同步所有啟用的主機
-func syncAllHosts(ctx context.Context, cfg *config.Config, configPath string) {
+func syncAllHosts(ctx context.Context, cfg *config.Config, configPath string, filterIface string) {
 	for _, h := range cfg.Hosts {
 		if !h.Enabled {
 			continue
 		}
-		syncHost(ctx, cfg, h)
+		syncHost(ctx, cfg, h, filterIface)
 	}
 	cfg.Save(configPath)
 }
 
-// syncHost 執行單一主機的 IP 檢測與 DNS 紀錄更新
-func syncHost(ctx context.Context, cfg *config.Config, h config.Host) {
+// syncHost 執行單一主機的 IP 檢測與 DNS 紀錄更新，回傳 bool 代表是否有執行同步
+func syncHost(ctx context.Context, cfg *config.Config, h config.Host, filterIface string) bool {
+	v4Iface := h.IPv4.Interface
+	if v4Iface == "" {
+		v4Iface = cfg.Settings.DefaultIPv4Interface
+	}
+	v6Iface := h.IPv6.Interface
+	if v6Iface == "" {
+		v6Iface = cfg.Settings.DefaultIPv6Interface
+	}
+
+	v4Matches := h.IPv4.Enabled && (filterIface == "" || v4Iface == filterIface)
+	v6Matches := h.IPv6.Enabled && (filterIface == "" || v6Iface == filterIface)
+
+	if filterIface != "" && !v4Matches && !v6Matches {
+		return false
+	}
+
 	pConfig, ok := cfg.Providers[h.Provider]
 	if !ok {
 		logger.Log(logger.ERROR, h.ID, "找不到綁定的 DNS Provider: %s", h.Provider)
-		return
+		return false
 	}
 
 	p, err := provider.NewProvider(pConfig)
 	if err != nil {
 		logger.Log(logger.ERROR, h.ID, "初始化 Provider %s 失敗: %v", h.Provider, err)
-		return
+		return false
 	}
 
 	// 處理 IPv4 更新
-	if h.IPv4.Enabled {
-		ip4, err := ipfetcher.ResolveIP(h.IPv4, false, cfg.Defaults.IPv4APIs, h.ID)
+	if v4Matches {
+		ip4, err := ipfetcher.ResolveIP(h.IPv4, false, cfg.Defaults.IPv4APIs, h.ID, cfg.Settings.DefaultIPv4Interface)
 		if err != nil {
 			logger.Log(logger.ERROR, h.ID, "計算 IPv4 失敗: %v", err)
 		} else {
@@ -252,8 +301,8 @@ func syncHost(ctx context.Context, cfg *config.Config, h config.Host) {
 	}
 
 	// 處理 IPv6 更新
-	if h.IPv6.Enabled {
-		ip6, err := ipfetcher.ResolveIP(h.IPv6, true, cfg.Defaults.IPv6APIs, h.ID)
+	if v6Matches {
+		ip6, err := ipfetcher.ResolveIP(h.IPv6, true, cfg.Defaults.IPv6APIs, h.ID, cfg.Settings.DefaultIPv6Interface)
 		if err != nil {
 			logger.Log(logger.ERROR, h.ID, "計算 IPv6 失敗: %v", err)
 		} else {
@@ -271,6 +320,8 @@ func syncHost(ctx context.Context, cfg *config.Config, h config.Host) {
 			}
 		}
 	}
+
+	return true
 }
 
 // setupSystemCAs 設定系統 TLS 憑證與自訂 CA

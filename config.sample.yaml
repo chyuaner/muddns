@@ -1,6 +1,8 @@
 settings:
     listen: :9876
     interval_seconds: 300
+    default_ipv4_interface: eth0
+    default_ipv6_interface: eth0
     custom_ca_file: ""
     insecure_skip_verify: false
     log_file: ""
@@ -14,7 +16,7 @@ defaults:
         - https://api.ipify.org
         - https://v4.ident.me
     ipv6_apis:
-        - https://ipv6.yuaner.tw/ip"
+        - https://ipv6.yuaner.tw/ip
         - https://api6.ipify.org
         - https://v6.ident.me
 providers:

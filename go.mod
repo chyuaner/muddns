@@ -1,6 +1,6 @@
 module muddns
 
-go 1.22
+go 1.25.0
 
 require (
 	github.com/cloudflare/cloudflare-go v0.117.0

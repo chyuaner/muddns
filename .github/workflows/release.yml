@@ -23,6 +23,11 @@ jobs:
         with:
           go-version: '1.25'
 
+      - name: Download & Prepare Dependencies
+        run: |
+          go mod download
+          go mod tidy
+
       - name: Cross-Compile Binaries
         run: |
           mkdir -p dist

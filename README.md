@@ -6,16 +6,20 @@
 
 ## 🌟 核心特色
 
-- **雙重模式 (Dual Mode)**：支援背景 Web UI 服務 (`serve`) 以及 `crontab` 定時單次觸發 (`sync`)。
+- **雙重與多維觸發模式 (Dual & Multi-Trigger Mode)**：
+  - **背景 Web UI 輪詢 (`serve`)**：常駐背景服務並提供 GUI 管理介面。
+  - **CLI / Crontab 單次同步 (`sync`)**：支援指定特定 Host (`-h`) 或指定網卡介面 (`-i pppoe0`) 獨立觸發。
+  - **🌐 HTTP API 遠端觸發 (`GET / POST /api/sync`)**：專為 OPNsense / pfSense / RouterOS 重撥或 WAN 介面重連事件 (devd / newwanip) 設計，支援 `curl` 傳入驗證 Token (`auth`) 與網卡介面過濾 (`interface=pppoe1`)。
+  - **⚙️ Linux Systemd 常駐服務 (`service install / uninstall`)**：比照 `ddns-go` 支援一鍵將 muddns 註冊、啟動或移除為 Linux 常駐服務。
 - **純淨初始化 (Zero-Dependency Auto-Init)**：未檢測到 `config.yaml` 時由程式自動生成乾淨極簡的純淨設定檔（預設 `admin/admin` 帳號密碼），不預填示範主機，`config.sample.yaml` 轉為純粹參考範例。
-- **全新 Bash 指令模式 (`command`)**：支援填入自訂 Shell/Bash 命令（例如 `curl`, `ip addr`, `awk` 等），自動解析 stdout 輸出作為 IPv4 或 IPv6 位址。
-- **漸進增強 Web UI (SSR + HTMX)**：
-  - **Dashboard 可展開主機詳細列 (`[▼ 展開]`)**：點擊一鍵展開顯示該主機完整的 IPv4/IPv6 模式、介面、正則/指令、最新算得 IP 與時間。
-  - **新增大量主機欄位重整與動態動態表頭**：
-    - 「主機啟用狀態」置於表格最左側欄位，「Cloudflare Proxied」置於「刪除」按鈕左側。
-    - 當切換 IPv4/IPv6 模式時，表格標題（如 `IPv4 參數 (Bash Command)` 或 `IPv6 參數 (Suffix)`）會動態隨模式名稱更新。
-  - **RAW Config 編輯器 (`/config/raw`)**：可在網頁上直接編輯與儲存 `config.yaml` 原始 YAML 內容（內建 YAML 語法解析校驗防錯）。
-  - **DNS Provider 分組展延 (Grouped Dashboard)**：Dashboard 主機清單自動依 DNS 服務商分類群組化，支援可收合式卡片 (`<details open>`) 檢視。
+- **全新 Bash 指令模式 (`command`)**：支援填入自訂 Shell/Bash 命令（例如 `curl`, `ip addr`, `awk` 等），自動解析 stdout 輸出作為 IPv4 或 IPv6 位位址。
+- **漸進增強 Web UI (SSR + HTMX + Vanilla CSS)**：
+  - **無 JS 降級完全相容 (No-JS Fallback)**：所有選單、對話框與表單均可在關閉 JavaScript 的環境下原生運作！對話框關閉/取消按鈕使用原生超連結 `<a>`，並透過 `.js-only` 自動於無 JS 環境下隱藏純 JS 互動按鈕。
+  - **舊版瀏覽器友善 (Progressive Enhancement)**：針對不支援 HTML5 `<dialog>` 標籤的老舊瀏覽器（如舊版 Safari、Android Webview），自動透過漸進降級 CSS 轉為頂部卡片樣式呈現，確保 100% 瀏覽器跨平台相容。
+  - **PJAX / View Transitions 全站動態換頁**：全站導入 HTMX `hx-boost` 與 CSS View Transitions API，提供媲美 SPA 單頁應用的滑順換頁體驗，無 JS 時自動無縫降級為標準 SSR。
+  - **HTML5 `<dialog>` 彈窗對話框**：新增與編輯主機、Provider 管理均採用原生 HTML5 `<dialog>` 對話框，具備背景毛玻璃模糊 (Backdrop Blur) 與跳出動畫，且編輯時完整保留背景表格。
+  - **OPNsense 風格可收合群組表格**：Dashboard 主機清單自動依 DNS 服務商分類群組化，支援可收合式表格列與視覺主題優化。
+  - **全域系統設定頁面 (`/settings`) & RAW Config 編輯器 (`/config/raw`)**：可在 Web UI 調整 `config.yaml` 的所有全域 settings 參數（監聽埠、輪詢秒數、API Token、TLS 跳過驗證、日誌路徑、WebAuth 等）或直接編輯 YAML 原文。
   - **OPNsense 風格 CSV 匯入/匯出 (`/hosts/export.csv`, `/hosts/import.csv`)**：支援一鍵下載完整 CSV 清單或批量貼上/上傳 CSV 快速導入多主機。
 - **IPv4 / IPv6 完全對稱模式**：
   - `external_api`：外網 Echo API 查詢（預設包含 `https://ipv4.yuaner.tw/ip` 與 `https://ipv6.yuaner.tw/ip` 並具備高可用自動備援機制）。

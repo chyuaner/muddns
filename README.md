@@ -264,6 +264,9 @@ hosts:
 1. **極簡的編譯與執行**：
    * 由於 `main.go` 已經獨立為唯一的入口，可以直接編譯整個目錄：
      ```bash
+     # 下載第三方依賴套件 (相當於 npm install)
+     go mod download
+     # 編譯為單一二進位執行檔
      go build -o muddns .
      ```
    * 開發時也可直接免編譯執行：

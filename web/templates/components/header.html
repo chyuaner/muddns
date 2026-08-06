@@ -72,14 +72,14 @@
     <div id="app-root">
         <header>
             <a href="/" class="logo">
-                ⚡ muddns
+                muddns 多主機 DDNS 更新發號臺
             </a>
             <div class="nav-links">
-                <a href="/" class="btn {{if eq .ActiveTab "dashboard"}}btn-primary{{else}}btn-secondary{{end}}">📊 Dashboard</a>
-                <a href="/providers" class="btn {{if eq .ActiveTab "providers"}}btn-primary{{else}}btn-secondary{{end}}">🔌 Provider 管理</a>
-                <a href="/config/raw" class="btn {{if eq .ActiveTab "config_raw"}}btn-primary{{else}}btn-secondary{{end}}">📝 RAW 編輯器</a>
-                <a href="/logs" class="btn {{if eq .ActiveTab "logs"}}btn-primary{{else}}btn-secondary{{end}}">📜 系統日誌</a>
-                <a href="/settings" class="btn {{if eq .ActiveTab "settings"}}btn-primary{{else}}btn-secondary{{end}}">⚙️ 系統設定</a>
+                <a href="/" class="btn {{if eq .ActiveTab "dashboard"}}btn-primary{{else}}btn-secondary{{end}}">所有主機</a>
+                <a href="/providers" class="btn {{if eq .ActiveTab "providers"}}btn-primary{{else}}btn-secondary{{end}}">Provider 管理</a>
+                <a href="/config/raw" class="btn {{if eq .ActiveTab "config_raw"}}btn-primary{{else}}btn-secondary{{end}}">RAW 編輯器</a>
+                <a href="/logs" class="btn {{if eq .ActiveTab "logs"}}btn-primary{{else}}btn-secondary{{end}}">系統日誌</a>
+                <a href="/settings" class="btn {{if eq .ActiveTab "settings"}}btn-primary{{else}}btn-secondary{{end}}">帳號設定</a>
                 
                 <button type="button" onclick="toggleTheme()" class="btn btn-secondary" hx-boost="false">🌓 切換主題</button>
                 <a href="/logout" class="btn btn-secondary" hx-boost="false">🚪 登出</a>

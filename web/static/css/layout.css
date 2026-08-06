@@ -54,28 +54,34 @@ header {
 .nav-links .btn {
     border-radius: 0.375rem;
     font-size: 0.875rem;
-    padding: 8px 14px;
-    transition: all 0.2s ease;
+    padding: 0.5rem 0.75rem;
+    border: none !important;
+    text-decoration: none;
+    transition: background-color 0.15s ease, opacity 0.15s ease, color 0.15s ease;
 }
 
 .nav-links .btn-secondary {
-    background-color: transparent;
-    color: var(--navbar-text, #dde1e7);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background-color: transparent !important;
+    color: var(--navbar-text, #dde1e7) !important;
     opacity: 0.85;
 }
 
 .nav-links .btn-secondary:hover {
-    background-color: var(--navbar-hover, rgba(255, 255, 255, 0.12));
+    background-color: rgba(255, 255, 255, 0.1) !important;
     opacity: 1;
-    color: #ffffff;
+    color: #ffffff !important;
 }
 
 .nav-links .btn-primary {
-    background-color: var(--navbar-active, rgba(255, 255, 255, 0.22));
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
     font-weight: 600;
+    opacity: 1;
+}
+
+.nav-links .btn-primary:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
 }
 
 /* 手機版 / 超窄寬度響應式調整 */

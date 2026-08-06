@@ -18,21 +18,25 @@ body {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 頂部導航列 (Top Navigation Bar) */
+/* 頂部導航列 (Top Navigation Bar - 對齊 yuaner 專案之 #27272a 質感深灰 Navbar) */
 header {
-    background-color: var(--card-bg);
-    border-bottom: 1px solid var(--border-color);
-    padding: 12px 24px;
+    background-color: var(--navbar-bg, #27272a);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 .logo {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: var(--primary);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--navbar-text, #dde1e7);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -42,9 +46,36 @@ header {
 
 .nav-links {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
+}
+
+.nav-links .btn {
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    padding: 8px 14px;
+    transition: all 0.2s ease;
+}
+
+.nav-links .btn-secondary {
+    background-color: transparent;
+    color: var(--navbar-text, #dde1e7);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    opacity: 0.85;
+}
+
+.nav-links .btn-secondary:hover {
+    background-color: var(--navbar-hover, rgba(255, 255, 255, 0.12));
+    opacity: 1;
+    color: #ffffff;
+}
+
+.nav-links .btn-primary {
+    background-color: var(--navbar-active, rgba(255, 255, 255, 0.22));
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
 }
 
 /* 手機版 / 超窄寬度響應式調整 */
@@ -77,24 +108,36 @@ header {
     padding: 0 16px;
 }
 
-/* 卡片與區塊 (Cards & Panels) */
+/* 卡片與區塊 (Cards & Panels - 對齊 yuaner-general-page 的 status-panel 外觀) */
 .card {
     background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: 1px solid var(--card-border, var(--border-color));
+    border-radius: 0.75rem; /* 12px 圓角 */
     padding: 20px;
     margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: var(--card-shadow, 0 1px 3px rgba(0,0,0,0.08));
+    overflow: hidden;
 }
 
-.card-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-    color: var(--text-color);
+.card-header {
+    margin: -20px -20px 20px -20px;
+    padding: 0.9rem 1.25rem;
+    background-color: var(--card-header-bg, var(--table-header-bg));
+    border-bottom: 1px solid var(--card-border, var(--border-color));
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--accent-color, var(--primary));
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* 表單控制元件 (Forms & Inputs) */

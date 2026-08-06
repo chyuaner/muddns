@@ -1,0 +1,107 @@
+/* ==========================================================================
+   muddns yuaner.tw / yuaner-general-page 專屬配色與 UI 主題 (theme-yuan.css)
+   對齊 yuaner 專責頁面色調、Navbar 樣式與 Status Card 外觀
+   ========================================================================== */
+
+:root {
+    /* 1. Navbar 定製色調 (Light & Dark 統一對齊 #27272a 深炭灰) */
+    --navbar-bg: #27272a;
+    --navbar-text: #dde1e7;
+    --navbar-hover: rgba(255, 255, 255, 0.12);
+    --navbar-active: rgba(255, 255, 255, 0.22);
+
+    /* 2. 預設深色主題變數 (Dracula / Nord Deep Midnight 漸層) */
+    --bg-gradient: linear-gradient(149deg, #282a36, #333445 13%, #353a52 30%, #2c2f3e 53%, #282a36 93%, #3e3647);
+    --bg-color: #282a36;
+    --card-bg: rgba(44, 47, 62, 0.85);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-header-bg: rgba(162, 189, 140, 0.12);
+    --accent-color: #a2bd8c;
+    --input-bg: #212330;
+    --border-color: rgba(255, 255, 255, 0.12);
+    --text-color: #e2e8f0;
+    --text-muted: #a0aec0;
+    --primary: #88c0d0;
+    --primary-hover: #81a1c1;
+    --success: #a2bd8c;
+    --danger: #bf616a;
+    --warning: #ebcb8b;
+    --table-header-bg: rgba(255, 255, 255, 0.05);
+    --preview-bg: rgba(162, 189, 140, 0.12);
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* 3. 原生 OS 系統設定為 Light Mode 時自動套用 yuaner 經典灰藍光亮漸層 */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+        --bg-gradient: linear-gradient(135deg, #f6f8f9, #e5ebee 50%, #d7dee3 56%, #f5f7f9);
+        --bg-color: #f6f8f9;
+        --card-bg: #ffffff;
+        --card-border: rgba(0, 0, 0, 0.08);
+        --card-header-bg: rgba(94, 129, 172, 0.12);
+        --accent-color: #5e81ac;
+        --input-bg: #f8fafc;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --text-color: #1a1d2e;
+        --text-muted: #4b5563;
+        --primary: #5e81ac;
+        --primary-hover: #4c6b93;
+        --success: #4caf50;
+        --danger: #bf616a;
+        --warning: #d08770;
+        --table-header-bg: rgba(94, 129, 172, 0.08);
+        --preview-bg: rgba(94, 129, 172, 0.1);
+        --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+    }
+}
+
+/* 4. 使用者手動切換指定 [data-theme="light"] 覆蓋 */
+[data-theme="light"] {
+    --bg-gradient: linear-gradient(135deg, #f6f8f9, #e5ebee 50%, #d7dee3 56%, #f5f7f9) !important;
+    --bg-color: #f6f8f9 !important;
+    --card-bg: #ffffff !important;
+    --card-border: rgba(0, 0, 0, 0.08) !important;
+    --card-header-bg: rgba(94, 129, 172, 0.12) !important;
+    --accent-color: #5e81ac !important;
+    --input-bg: #f8fafc !important;
+    --border-color: rgba(0, 0, 0, 0.1) !important;
+    --text-color: #1a1d2e !important;
+    --text-muted: #4b5563 !important;
+    --primary: #5e81ac !important;
+    --primary-hover: #4c6b93 !important;
+    --success: #4caf50 !important;
+    --danger: #bf616a !important;
+    --warning: #d08770 !important;
+    --table-header-bg: rgba(94, 129, 172, 0.08) !important;
+    --preview-bg: rgba(94, 129, 172, 0.1) !important;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 5. 使用者手動切換指定 [data-theme="dark"] 覆蓋 */
+[data-theme="dark"] {
+    --bg-gradient: linear-gradient(149deg, #282a36, #333445 13%, #353a52 30%, #2c2f3e 53%, #282a36 93%, #3e3647) !important;
+    --bg-color: #282a36 !important;
+    --card-bg: rgba(44, 47, 62, 0.85) !important;
+    --card-border: rgba(255, 255, 255, 0.08) !important;
+    --card-header-bg: rgba(162, 189, 140, 0.12) !important;
+    --accent-color: #a2bd8c !important;
+    --input-bg: #212330 !important;
+    --border-color: rgba(255, 255, 255, 0.12) !important;
+    --text-color: #e2e8f0 !important;
+    --text-muted: #a0aec0 !important;
+    --primary: #88c0d0 !important;
+    --primary-hover: #81a1c1 !important;
+    --success: #a2bd8c !important;
+    --danger: #bf616a !important;
+    --warning: #ebcb8b !important;
+    --table-header-bg: rgba(255, 255, 255, 0.05) !important;
+    --preview-bg: rgba(162, 189, 140, 0.12) !important;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* 將頁面背景設定為 yuaner 經典漸層背景 */
+body {
+    background: var(--bg-gradient) !important;
+    background-attachment: fixed !important;
+    color: var(--text-color);
+}

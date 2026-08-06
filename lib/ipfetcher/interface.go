@@ -8,10 +8,18 @@ import (
 	"strings"
 )
 
-// FetchInterfaceIP 自指定系統網卡 (如 eth0, wg0) 讀取對應的 IPv4 或 IPv6 地址
+// FetchInterfaceIP 自指定系統網卡 (如 eth0, wg0, eth1@if75) 讀取對應的 IPv4 或 IPv6 地址
 // 支援使用索引 (例 `@1`, `@2`) 取得第 N 個匹配的 IP，或是正則表達式進行篩選
 func FetchInterfaceIP(ifaceName string, matchExpr string, isIPv6 bool) (string, error) {
 	iface, err := net.InterfaceByName(ifaceName)
+	if err != nil && strings.Contains(ifaceName, "@") {
+		// LXC / veth 介面名稱在 ip addr 常顯示為 eth1@if75，但 OS 實際介面名為 eth1
+		cleanName := strings.Split(ifaceName, "@")[0]
+		if cleanIface, cleanErr := net.InterfaceByName(cleanName); cleanErr == nil {
+			iface = cleanIface
+			err = nil
+		}
+	}
 	if err != nil {
 		return "", fmt.Errorf("找不到網卡介面 %s: %w", ifaceName, err)
 	}

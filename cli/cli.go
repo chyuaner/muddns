@@ -478,7 +478,7 @@ depend() {
 		fmt.Println("  • 查看服務狀態: rc-service muddns status")
 		fmt.Println("  • 停止服務    : rc-service muddns stop")
 		fmt.Println("  • 卸載常駐服務: sudo ./muddns service uninstall")
-		fmt.Println("================================================================\n")
+		fmt.Println("================================================================")
 		return
 	}
 
@@ -532,7 +532,7 @@ WantedBy=multi-user.target
 	fmt.Println("  • 查看服務日誌: journalctl -u muddns -f")
 	fmt.Println("  • 停止服務    : systemctl stop muddns")
 	fmt.Println("  • 卸載常駐服務: sudo ./muddns service uninstall")
-	fmt.Println("================================================================\n")
+	fmt.Println("================================================================")
 }
 
 // runUninstallService 停止、關閉並移除系統服務 (Systemd 或 OpenRC)

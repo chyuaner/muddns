@@ -1,0 +1,74 @@
+/* ==========================================================================
+   muddns 配色與主題 CSS (Theme & Color System)
+   支援 OS 原生 prefers-color-scheme 與手動切換 (data-theme 覆蓋)
+   ========================================================================== */
+
+/* 1. 預設深色主題變數 (當 OS 支援或預設狀況) */
+:root {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --input-bg: #0f172a;
+    --border-color: #334155;
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #38bdf8;
+    --primary-hover: #0284c7;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --table-header-bg: rgba(0, 0, 0, 0.2);
+    --preview-bg: rgba(56, 189, 248, 0.1);
+}
+
+/* 2. 原生 OS 系統設定為 Light Mode 時自動套用 */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --input-bg: #ffffff;
+        --border-color: #cbd5e1;
+        --text-color: #0f172a;
+        --text-muted: #64748b;
+        --primary: #0284c7;
+        --primary-hover: #0369a1;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --table-header-bg: #f1f5f9;
+        --preview-bg: rgba(2, 132, 199, 0.08);
+    }
+}
+
+/* 3. 使用者手動切換指定 [data-theme="light"] 覆蓋 */
+[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --input-bg: #ffffff;
+    --border-color: #cbd5e1;
+    --text-color: #0f172a;
+    --text-muted: #64748b;
+    --primary: #0284c7;
+    --primary-hover: #0369a1;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --table-header-bg: #f1f5f9;
+    --preview-bg: rgba(2, 132, 199, 0.08);
+}
+
+/* 4. 使用者手動切換指定 [data-theme="dark"] 覆蓋 */
+[data-theme="dark"] {
+    --bg-color: #0f172a;
+    --card-bg: #1e293b;
+    --input-bg: #0f172a;
+    --border-color: #334155;
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #38bdf8;
+    --primary-hover: #0284c7;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --table-header-bg: rgba(0, 0, 0, 0.2);
+    --preview-bg: rgba(56, 189, 248, 0.1);
+}

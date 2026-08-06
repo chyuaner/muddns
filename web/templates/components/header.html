@@ -1,0 +1,100 @@
+{{define "header"}}
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>muddns - 多主機 DDNS 管理系統</title>
+    
+    <!-- 獨立外連 CSS 檔：配色 (theme.css) 與 排版元件 (layout.css) -->
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    
+    <!-- HTMX 輕量級動態互動庫 -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Dark Mode 主題初始化腳本 (優先遵循 OS media 偏好，點擊切換後覆蓋) -->
+    <script>
+        var enableLocalStorage = false; // 內部開關：是否將主題偏好記錄至 localStorage (預設關閉)
+
+        (function() {
+            if (enableLocalStorage) {
+                var savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                }
+            }
+        })();
+
+        function toggleTheme() {
+            var currentTheme = document.documentElement.getAttribute('data-theme');
+            var targetTheme = '';
+
+            if (currentTheme) {
+                targetTheme = (currentTheme === 'dark') ? 'light' : 'dark';
+            } else {
+                // 如果目前沒有手動 override，檢查系統 OS 偏好並切換至相反模式
+                var isOSDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                targetTheme = isOSDark ? 'light' : 'dark';
+            }
+
+            document.documentElement.setAttribute('data-theme', targetTheme);
+
+            if (enableLocalStorage) {
+                localStorage.setItem('theme', targetTheme);
+            }
+        }
+
+        function toggleCollapse(elementId) {
+            var el = document.getElementById(elementId);
+            if (el) {
+                if (el.style.display === 'none') {
+                    el.style.display = 'block';
+                } else {
+                    el.style.display = 'none';
+                }
+            }
+        }
+
+        function togglePseudoDisabled(elementId, enabled) {
+            var el = document.getElementById(elementId);
+            if (el) {
+                if (enabled) {
+                    el.classList.remove('pseudo-disabled');
+                } else {
+                    el.classList.add('pseudo-disabled');
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <a href="/" class="logo">
+            ⚡ muddns
+        </a>
+        <div class="nav-links">
+            <a href="/" class="btn {{if eq .ActiveTab "dashboard"}}btn-primary{{else}}btn-secondary{{end}}">📊 Dashboard</a>
+            <a href="/providers" class="btn {{if eq .ActiveTab "providers"}}btn-primary{{else}}btn-secondary{{end}}">🔌 Provider 管理</a>
+            <a href="/config/raw" class="btn {{if eq .ActiveTab "config_raw"}}btn-primary{{else}}btn-secondary{{end}}">📝 RAW 編輯器</a>
+            <a href="/logs" class="btn {{if eq .ActiveTab "logs"}}btn-primary{{else}}btn-secondary{{end}}">📜 系統日誌</a>
+            <a href="/settings" class="btn {{if eq .ActiveTab "settings"}}btn-primary{{else}}btn-secondary{{end}}">⚙️ 系統設定</a>
+            
+            <button type="button" onclick="toggleTheme()" class="btn btn-secondary">🌓 切換主題</button>
+            <a href="/logout" class="btn btn-secondary">🚪 登出</a>
+        </div>
+    </header>
+
+    <div class="container">
+        {{if .Message}}
+        <div class="card" style="border-left: 4px solid var(--success); background-color: var(--card-bg); padding: 12px; margin-bottom: 16px;">
+            ✅ {{.Message}}
+        </div>
+        {{end}}
+
+        {{if .Error}}
+        <div class="card" style="border-left: 4px solid var(--danger); background-color: var(--card-bg); padding: 12px; margin-bottom: 16px;">
+            ❌ {{.Error}}
+        </div>
+        {{end}}
+{{end}}

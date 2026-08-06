@@ -35,11 +35,50 @@
 ### 1. 編譯與安裝
 ```bash
 cd /home/yuan/Documents/Git/Yuan/muddns
-go build -o muddns main.go embed.go
+go build -o muddns .
 ```
 
-第一次執行時，系統會自動檢測並從 `config.sample.yaml` 自動複製生成 `config.yaml`。
+第一次執行時，系統會自動檢測並產生純淨極簡的 `config.yaml`（預設帳號密碼 `admin` / `admin`）。
 `config.yaml` 已加入 `.gitignore`，確保您的 API Token 與密碼不會意外提交至版本庫。
+
+---
+
+## 📂 專案模組架構
+
+```text
+muddns/
+├── main.go               # 🎯 專案進入點 (僅 15 行，呼叫 cli 模組)
+├── cli/                  # 💻 CLI 命令解析器 (serve, sync, status, version)
+│   └── cli.go
+├── config/               # ⚙️ 設定檔 YAML 載入、儲存與 CSV 匯入匯出
+│   └── config.go
+├── lib/                  # 📚 核心功能與工具庫
+│   ├── ipfetcher/        # IP 計算與取得 (API, 網卡, Bash 指令, 前綴拼接, EUI-64)
+│   ├── provider/         # DNS 服務商更新 API (Cloudflare, Namecheap, Custom HTTP)
+│   └── logger/           # 記憶體環狀日誌與 Console 輸出
+└── web/                  # 🌐 Web UI 服務與控制層 (遵循 Go 主流標準慣例)
+    ├── types.go          # 📐 型別與結構體定義 (Server, PageData, BatchRow)
+    ├── server.go         # 🏗️ WebServer 生命週期管理 (Start & Shutdown)
+    ├── router.go         # 🛣️ 路由註冊 (Go 1.22+ 原生 "GET /path" / "POST /path" 標註)
+    ├── handlers.go       # 🎮 控制器處理常式 (Request Handlers / Controllers)
+    ├── embed.go          # 📦 靜態資產打包 (Go 1.16+ 原生 go:embed 特性)
+    └── templates/        # 🎨 HTML 視圖範本檔案 (dashboard, providers, raw config...)
+```
+
+### 💡 Web 模組對照 MVC 概念說明
+
+對於有傳統 Web 框架（Laravel / Express / Rails）經驗的開發者，本專案 `/web` 模組可以輕鬆對應至 MVC 架構：
+
+| Go 檔案 / 目錄 | 傳統 MVC 角色 | 職責與說明 |
+| :--- | :--- | :--- |
+| **`web/types.go`** | **Model (ViewModel)** | 定義傳遞給 HTML 前端視圖渲染的資料結構 (`PageData`, `BatchRow`)。 |
+| **`web/templates/`** | **View (視圖層)** | 拆分的 HTML 視圖範本（`header.html`, `dashboard.html`, `providers.html` 等）。 |
+| **`web/handlers.go`** | **Controller (控制器)** | 處理 HTTP 請求、呼叫算 IP / 儲存 YAML 邏輯，並將結果傳遞給視圖渲染。 *(Go 社群慣稱為 Handler)* |
+| **`web/router.go`** | **Router & Middleware** | 宣告 URL 路由表（採用 Go 1.22+ `"GET /path"` / `"POST /path"` 語法）與 BasicAuth 權限過濾器。 |
+| **`web/embed.go`** | **Asset Bundler** | 使用 Go 1.16+ `//go:embed` 標籤，在編譯時期將 `templates/` 目錄打入單一二進位執行檔。 |
+| **`web/server.go`** | **App Server** | 管理 Web 伺服器的監聽啟動 (`Start`) 與安全平滑關閉 (`Shutdown`)。 |
+
+---
 
 ### 2. 常用命令
 
@@ -116,3 +155,21 @@ hosts:
       interface: "eth0"
       suffix: "::100"
 ```
+
+## 🌟 開發備註
+
+1. **極簡的編譯與執行**：
+   * 由於 `main.go` 已經獨立為唯一的入口，可以直接編譯整個目錄：
+     ```bash
+     go build -o muddns .
+     ```
+   * 開發時也可直接免編譯執行：
+     ```bash
+     go run . serve
+     ```
+2. **`web/` 模組清晰三分**：
+   * **[router.go](./web/router.go)**：專門用來查看整個 Web UI 的網址路由地圖（如 `/hosts/save` 對應哪個 Handler）。
+   * **[handlers.go](./web/handlers.go)**：專門撰寫每個網頁頁面或 API 送出表單後的邏輯處理。
+   * **[server.go](./web/server.go)**：宣告傳遞給前端範本的資料結構。
+3. **`lib/` 內部工具庫集中化**：
+   * 將 `ipfetcher`、`provider` 與 `logger` 統一整理入 [lib/](./lib) 資料夾中。

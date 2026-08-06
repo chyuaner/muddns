@@ -50,12 +50,24 @@
 
 ## 🚀 快速開始
 
-### 1. 編譯與安裝
-```bash
-# 進入專案目錄
-cd muddns
+### 1. 安裝與執行
 
-# 1. 下載並安裝第三方依賴套件 (相當於 npm install)
+#### 📦 方式 A：直接下載預編譯執行檔 (正式伺服器推薦)
+正式伺服器無需安裝 Go 環境，自動化 CI/CD 會在 Push 至 `prod` 分支時自動跨平台編譯。直接從 GitHub Release 下載即可：
+```bash
+# 1. 下載最新 Linux amd64 預編譯檔
+wget https://github.com/chyuaner/muddns/releases/latest/download/muddns-linux-amd64 -O muddns
+
+# 2. 賦予執行權限
+chmod +x muddns
+
+# 3. 一鍵安裝並啟動為 Linux 常駐服務
+sudo ./muddns service install -c /etc/muddns/config.yaml
+```
+
+#### 🛠️ 方式 B：自行本地編譯 (開發者模式)
+```bash
+# 1. 下載並安裝依賴套件 (相當於 npm install)
 go mod download
 
 # 2. 編譯為單一二進位執行檔

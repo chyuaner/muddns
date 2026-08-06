@@ -390,15 +390,26 @@ func setupSystemCAs(customCA string, insecureSkip bool) {
 	}
 }
 
-// runInstallService 註冊 Linux Systemd 常駐服務
+// isOpenRC 檢查目前作業系統是否採用 OpenRC Init 系統 (例如 Alpine Linux)
+func isOpenRC() bool {
+	if _, err := os.Stat("/sbin/openrc-run"); err == nil {
+		return true
+	}
+	if _, err := os.Stat("/etc/alpine-release"); err == nil {
+		return true
+	}
+	return false
+}
+
+// runInstallService 自動將 muddns 註冊為常駐服務 (支援 Linux Systemd 與 OpenRC)
 func runInstallService(configPath string) {
 	if runtime.GOOS != "linux" {
-		fmt.Println("[!] 目前自動註冊服務功能僅原生支援 Linux Systemd。非 Linux 系統請自行手動設定常駐進程。")
+		fmt.Println("[!] 目前自動註冊服務功能僅支援 Linux (Systemd / OpenRC)。")
 		os.Exit(1)
 	}
 
 	if os.Geteuid() != 0 {
-		fmt.Println("[!] 錯誤：安裝 Systemd 系統服務需要 root 權限，請加上 sudo 重新執行:")
+		fmt.Println("[!] 錯誤：安裝系統服務需要 root 權限，請加上 sudo 重新執行:")
 		fmt.Printf("    sudo %s service install -c %s\n", os.Args[0], configPath)
 		os.Exit(1)
 	}
@@ -422,6 +433,57 @@ func runInstallService(configPath string) {
 	}
 
 	workDir := filepath.Dir(absConfigPath)
+
+	if isOpenRC() {
+		// Alpine Linux / OpenRC 初始化流程
+		serviceContent := fmt.Sprintf(`#!/sbin/openrc-run
+
+name="muddns"
+description="muddns - Multi-host DDNS Service"
+command="%s"
+command_args="serve -c %s"
+command_background="yes"
+pidfile="/run/${RC_SVCNAME}.pid"
+directory="%s"
+
+depend() {
+	need net
+	after firewall
+}
+`, absExecPath, absConfigPath, workDir)
+
+		serviceFilePath := "/etc/init.d/muddns"
+		err = os.WriteFile(serviceFilePath, []byte(serviceContent), 0755)
+		if err != nil {
+			fmt.Printf("[ERROR] 寫入 OpenRC 服務設定檔失敗 (%s): %v\n", serviceFilePath, err)
+			os.Exit(1)
+		}
+
+		fmt.Println("[+] 成功創建 OpenRC 服務腳本: " + serviceFilePath)
+
+		if err := exec.Command("rc-update", "add", "muddns", "default").Run(); err != nil {
+			fmt.Printf("[!] rc-update add 失敗: %v\n", err)
+		}
+		if err := exec.Command("rc-service", "muddns", "start").Run(); err != nil {
+			fmt.Printf("[!] rc-service start 失敗: %v\n", err)
+		} else {
+			fmt.Println("[+] 成功啟動並開啟 OpenRC 常駐服務: muddns")
+		}
+
+		fmt.Println("\n================================================================================")
+		fmt.Println("  🎉 muddns OpenRC 常駐服務已安裝並成功啟動！(Alpine Linux)")
+		fmt.Println("================================================================================")
+		fmt.Printf("  • 執行檔路徑 : %s\n", absExecPath)
+		fmt.Printf("  • 設定檔路徑 : %s\n", absConfigPath)
+		fmt.Println("  • 查看服務狀態: rc-service muddns status")
+		fmt.Println("  • 停止服務    : rc-service muddns stop")
+		fmt.Println("  • 卸載常駐服務: sudo ./muddns service uninstall")
+		fmt.Println("================================================================\n")
+		return
+	}
+
+	// Systemd 初始化流程 (Ubuntu / Debian / CentOS / Arch)
+	_ = os.MkdirAll("/etc/systemd/system", 0755)
 
 	serviceContent := fmt.Sprintf(`[Unit]
 Description=muddns - Multi-host DDNS Service
@@ -462,7 +524,7 @@ WantedBy=multi-user.target
 	}
 
 	fmt.Println("\n================================================================================")
-	fmt.Println("  🎉 muddns 常駐服務已安裝並成功啟動！")
+	fmt.Println("  🎉 muddns Systemd 常駐服務已安裝並成功啟動！")
 	fmt.Println("================================================================================")
 	fmt.Printf("  • 執行檔路徑 : %s\n", absExecPath)
 	fmt.Printf("  • 設定檔路徑 : %s\n", absConfigPath)
@@ -470,10 +532,10 @@ WantedBy=multi-user.target
 	fmt.Println("  • 查看服務日誌: journalctl -u muddns -f")
 	fmt.Println("  • 停止服務    : systemctl stop muddns")
 	fmt.Println("  • 卸載常駐服務: sudo ./muddns service uninstall")
-	fmt.Println("================================================================================\n")
+	fmt.Println("================================================================\n")
 }
 
-// runUninstallService 停止、關閉並移除 Systemd 服務
+// runUninstallService 停止、關閉並移除系統服務 (Systemd 或 OpenRC)
 func runUninstallService() {
 	if runtime.GOOS != "linux" {
 		fmt.Println("[!] 目前自動註冊服務功能僅原生支援 Linux Systemd。")

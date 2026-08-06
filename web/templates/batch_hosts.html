@@ -1,0 +1,207 @@
+{{template "header" .}}
+<div class="container">
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{if .IsBatchEdit}}✏️ 批量編輯主機 (DNS Provider: {{.CommonProvider}}){{else}}➕ 新增大量主機{{end}}</h2>
+            <a href="/" class="btn btn-secondary btn-sm">返回總覽</a>
+        </div>
+
+        {{if .Message}}
+        <div style="background-color: rgba(251, 191, 36, 0.2); border: 1px solid var(--warning); color: var(--warning); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            ⚠️ {{.Message}}
+        </div>
+        {{end}}
+
+        <form action="/hosts/batch-save" method="POST" id="batch-hosts-form">
+            <input type="hidden" name="is_edit" value="{{if .IsBatchEdit}}true{{else}}false{{end}}">
+
+            <!-- Common Template Options -->
+            <div class="card" style="background-color: var(--input-bg); margin-bottom: 20px;">
+                <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--primary);">通用範本設定 (模板)</h3>
+                
+                <div class="form-group">
+                    <label class="form-label">DNS Provider</label>
+                    <select name="common_provider" class="form-control" required {{if .IsBatchEdit}}readonly{{end}}>
+                        {{range $k, $v := $.Providers}}
+                        <option value="{{$k}}" {{if eq $.CommonProvider $k}}selected{{end}}>{{$k}} ({{$v.Provider}})</option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <div class="grid-2">
+                    <!-- IPv4 Common Config -->
+                    <div style="border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;" id="common-ipv4-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: var(--primary);">IPv4 通用設定</strong>
+                            <label style="cursor: pointer; font-size: 0.85rem;">
+                                <input type="checkbox" name="common_ipv4_enabled" value="true" {{if .CommonIPv4Enabled}}checked{{end}} onchange="toggleBox('common-ipv4-box', this.checked)"> 啟用 IPv4
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IPv4 模式 (Mode)</label>
+                            <select name="common_ipv4_mode" id="select-v4-mode" class="form-control" onchange="updateHeaderLabels()">
+                                <option value="external_api" {{if eq .CommonIPv4Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
+                                <option value="interface" {{if eq .CommonIPv4Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
+                                <option value="base_offset" {{if eq .CommonIPv4Mode "base_offset"}}selected{{end}}>base_offset (學術網段 + 偏移量)</option>
+                                <option value="arp_mac" {{if eq .CommonIPv4Mode "arp_mac"}}selected{{end}}>arp_mac (ARP / 鄰居表 MAC 探測)</option>
+                                <option value="command" {{if eq .CommonIPv4Mode "command"}}selected{{end}}>command (自訂 Bash 指令輸出)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">網卡介面 (Interface)</label>
+                            <input type="text" name="common_ipv4_interface" class="form-control" value="{{if .CommonIPv4Interface}}{{.CommonIPv4Interface}}{{else}}eth0{{end}}" placeholder="eth0">
+                        </div>
+                    </div>
+
+                    <!-- IPv6 Common Config -->
+                    <div style="border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;" id="common-ipv6-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: var(--primary);">IPv6 通用設定</strong>
+                            <label style="cursor: pointer; font-size: 0.85rem;">
+                                <input type="checkbox" name="common_ipv6_enabled" value="true" {{if .CommonIPv6Enabled}}checked{{end}} onchange="toggleBox('common-ipv6-box', this.checked)"> 啟用 IPv6
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IPv6 模式 (Mode)</label>
+                            <select name="common_ipv6_mode" id="select-v6-mode" class="form-control" onchange="updateHeaderLabels()">
+                                <option value="prefix_stitching" {{if eq .CommonIPv6Mode "prefix_stitching"}}selected{{end}}>prefix_stitching (動態前綴 + 固定後綴)</option>
+                                <option value="eui64_mac" {{if eq .CommonIPv6Mode "eui64_mac"}}selected{{end}}>eui64_mac (動態前綴 + MAC 轉算)</option>
+                                <option value="external_api" {{if eq .CommonIPv6Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
+                                <option value="interface" {{if eq .CommonIPv6Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
+                                <option value="command" {{if eq .CommonIPv6Mode "command"}}selected{{end}}>command (自訂 Bash 指令輸出)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">網卡介面 (Interface)</label>
+                            <input type="text" name="common_ipv6_interface" class="form-control" value="{{if .CommonIPv6Interface}}{{.CommonIPv6Interface}}{{else}}eth0{{end}}" placeholder="eth0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Batch Host Table -->
+            <div class="card-header">
+                <h3 style="font-size: 1rem;">主機資料列表</h3>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addBatchRow()">+ 新增一筆主機</button>
+            </div>
+
+            <div class="table-responsive">
+                <table id="batch-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;">啟用</th>
+                            <th style="min-width: 130px;">主機名稱 (Name)</th>
+                            <th style="min-width: 170px;">子域名 (Domains, 逗號分隔)</th>
+                            <th id="th-v4" style="min-width: 140px;">IPv4 參數 (Val/Offset/Match/MAC)</th>
+                            <th id="th-v6" style="min-width: 140px;">IPv6 參數 (Suffix/MAC)</th>
+                            <th style="width: 70px; text-align: center;">Proxied</th>
+                            <th style="width: 60px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batch-tbody">
+                        {{range $idx, $row := .BatchRows}}
+                        <tr>
+                            <input type="hidden" name="row_index" value="{{$idx}}">
+                            <td style="text-align: center;"><input type="checkbox" name="row_enabled_{{$idx}}" value="true" {{if $row.Enabled}}checked{{end}}></td>
+                            <td><input type="text" name="row_name" class="form-control" value="{{$row.Name}}" required placeholder="例: NAS-01"></td>
+                            <td><input type="text" name="row_domains" class="form-control" value="{{$row.DomainStr}}" required placeholder="nas1.example.com"></td>
+                            <td><input type="text" name="row_ipv4_val" class="form-control" value="{{$row.IPv4Val}}" placeholder="例: 10 或 @1 或 bash"></td>
+                            <td><input type="text" name="row_ipv6_val" class="form-control" value="{{$row.IPv6Val}}" placeholder="例: ::101 或 MAC 或 bash"></td>
+                            <td style="text-align: center;"><input type="checkbox" name="row_proxied_{{$idx}}" value="true" {{if $row.Proxied}}checked{{end}}></td>
+                            <td><button type="button" class="btn btn-danger btn-sm" onclick="removeBatchRow(this)">刪除</button></td>
+                        </tr>
+                        {{else}}
+                        <!-- Initial Default 3 empty rows -->
+                        <tr>
+                            <input type="hidden" name="row_index" value="0">
+                            <td style="text-align: center;"><input type="checkbox" name="row_enabled_0" value="true" checked></td>
+                            <td><input type="text" name="row_name" class="form-control" placeholder="例: NAS-01"></td>
+                            <td><input type="text" name="row_domains" class="form-control" placeholder="nas1.example.com"></td>
+                            <td><input type="text" name="row_ipv4_val" class="form-control" placeholder="例: 10 或 @1 或 bash"></td>
+                            <td><input type="text" name="row_ipv6_val" class="form-control" placeholder="例: ::101 或 MAC 或 bash"></td>
+                            <td style="text-align: center;"><input type="checkbox" name="row_proxied_0" value="true"></td>
+                            <td><button type="button" class="btn btn-danger btn-sm" onclick="removeBatchRow(this)">刪除</button></td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 12px;">
+                <button type="submit" class="btn btn-primary">💾 批量儲存主機</button>
+                <a href="/" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+var rowCounter = 100;
+
+function toggleBox(boxId, enabled) {
+    var box = document.getElementById(boxId);
+    if (!box) return;
+    if (enabled) {
+        box.classList.remove('pseudo-disabled');
+    } else {
+        box.classList.add('pseudo-disabled');
+    }
+}
+
+function updateHeaderLabels() {
+    var v4Mode = document.getElementById('select-v4-mode').value;
+    var v6Mode = document.getElementById('select-v6-mode').value;
+    
+    var thV4 = document.getElementById('th-v4');
+    var thV6 = document.getElementById('th-v6');
+
+    var v4Labels = {
+        'external_api': 'IPv4 參數 (API URL)',
+        'interface': 'IPv4 參數 (Match/Regex)',
+        'base_offset': 'IPv4 參數 (Offset)',
+        'arp_mac': 'IPv4 參數 (MAC Address)',
+        'command': 'IPv4 參數 (Bash Command)'
+    };
+
+    var v6Labels = {
+        'prefix_stitching': 'IPv6 參數 (Suffix)',
+        'eui64_mac': 'IPv6 參數 (MAC Address)',
+        'external_api': 'IPv6 參數 (API URL)',
+        'interface': 'IPv6 參數 (Match/Regex)',
+        'command': 'IPv6 參數 (Bash Command)'
+    };
+
+    if (thV4 && v4Labels[v4Mode]) thV4.innerText = v4Labels[v4Mode];
+    if (thV6 && v6Labels[v6Mode]) thV6.innerText = v6Labels[v6Mode];
+}
+
+function addBatchRow() {
+    rowCounter++;
+    var idx = rowCounter;
+    var tbody = document.getElementById('batch-tbody');
+    var tr = document.createElement('tr');
+    tr.innerHTML = `
+        <input type="hidden" name="row_index" value="${idx}">
+        <td style="text-align: center;"><input type="checkbox" name="row_enabled_${idx}" value="true" checked></td>
+        <td><input type="text" name="row_name" class="form-control" required placeholder="例: NAS-02"></td>
+        <td><input type="text" name="row_domains" class="form-control" required placeholder="nas2.example.com"></td>
+        <td><input type="text" name="row_ipv4_val" class="form-control" placeholder="例: 11 或 @2 或 bash"></td>
+        <td><input type="text" name="row_ipv6_val" class="form-control" placeholder="例: ::102 或 MAC 或 bash"></td>
+        <td style="text-align: center;"><input type="checkbox" name="row_proxied_${idx}" value="true"></td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="removeBatchRow(this)">刪除</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function removeBatchRow(btn) {
+    var tr = btn.closest('tr');
+    if (tr) tr.remove();
+}
+
+// Initial label update
+updateHeaderLabels();
+</script>
+
+{{template "footer" .}}

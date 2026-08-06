@@ -1,0 +1,35 @@
+{{template "header" .}}
+<div class="container">
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📄 直接編輯 config.yaml (RAW 文字編輯器)</h2>
+        </div>
+        
+        {{if .Error}}
+        <div style="background-color: rgba(248, 113, 113, 0.2); border: 1px solid var(--danger); color: var(--danger); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            ⚠️ {{.Error}}
+        </div>
+        {{end}}
+        
+        {{if .Message}}
+        <div style="background-color: rgba(74, 222, 128, 0.2); border: 1px solid var(--success); color: var(--success); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            ✅ {{.Message}}
+        </div>
+        {{end}}
+        
+        <form action="/config/raw" method="POST">
+            <div class="form-group">
+                <label class="form-label">YAML 設定檔原始內容 (請小心編輯，語法錯誤將被拒絕儲存)</label>
+                <textarea name="raw_yaml" class="form-control" style="font-family: monospace; min-height: 480px; line-height: 1.4; font-size: 0.9rem;" required>{{.RawYAML}}</textarea>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; gap: 12px;">
+                <button type="submit" class="btn btn-primary">💾 儲存 YAML 設定檔</button>
+                <a href="/" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+
+</div>
+{{template "footer" .}}

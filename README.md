@@ -7,11 +7,16 @@
 ## 🌟 核心特色
 
 - **雙重模式 (Dual Mode)**：支援背景 Web UI 服務 (`serve`) 以及 `crontab` 定時單次觸發 (`sync`)。
+- **純淨初始化 (Zero-Dependency Auto-Init)**：未檢測到 `config.yaml` 時由程式自動生成乾淨極簡的純淨設定檔（預設 `admin/admin` 帳號密碼），不預填示範主機，`config.sample.yaml` 轉為純粹參考範例。
+- **全新 Bash 指令模式 (`command`)**：支援填入自訂 Shell/Bash 命令（例如 `curl`, `ip addr`, `awk` 等），自動解析 stdout 輸出作為 IPv4 或 IPv6 位址。
 - **漸進增強 Web UI (SSR + HTMX)**：
-  - **Light Mode / Dark Mode 重新精緻配色**：修正 Light Mode 下輸入框背景色與邊框，呈現極具質感的清爽純白與淡灰 (slate-50/100) 風格，支援系統偏好自動檢測與右上角 `☀️ / 🌙` 切換。
-  - **模組化 HTML 範本架構 (`web/templates/`)**：拆分為獨立且邏輯清晰的範本檔案（`header.html`, `footer.html`, `dashboard.html`, `providers.html`, `logs.html`, `settings.html`），方便前端自行編輯維護。
-  - **DNS 服務商管理 (Provider Manager)**：支援直接在網頁新增、編輯與刪除 Cloudflare、Namecheap 或 Custom HTTP 服務商金鑰。
-  - 無 JS 時相容傳統 HTML `<form>` 表單與老舊瀏覽器；開啟 JS 時支援不刷頁表格編輯、批量勾選與**即時 IP 預覽 (Live Preview)**。
+  - **Dashboard 可展開主機詳細列 (`[▼ 展開]`)**：點擊一鍵展開顯示該主機完整的 IPv4/IPv6 模式、介面、正則/指令、最新算得 IP 與時間。
+  - **新增大量主機欄位重整與動態動態表頭**：
+    - 「主機啟用狀態」置於表格最左側欄位，「Cloudflare Proxied」置於「刪除」按鈕左側。
+    - 當切換 IPv4/IPv6 模式時，表格標題（如 `IPv4 參數 (Bash Command)` 或 `IPv6 參數 (Suffix)`）會動態隨模式名稱更新。
+  - **RAW Config 編輯器 (`/config/raw`)**：可在網頁上直接編輯與儲存 `config.yaml` 原始 YAML 內容（內建 YAML 語法解析校驗防錯）。
+  - **DNS Provider 分組展延 (Grouped Dashboard)**：Dashboard 主機清單自動依 DNS 服務商分類群組化，支援可收合式卡片 (`<details open>`) 檢視。
+  - **OPNsense 風格 CSV 匯入/匯出 (`/hosts/export.csv`, `/hosts/import.csv`)**：支援一鍵下載完整 CSV 清單或批量貼上/上傳 CSV 快速導入多主機。
 - **IPv4 / IPv6 完全對稱模式**：
   - `external_api`：外網 Echo API 查詢（預設包含 `https://ipv4.yuaner.tw/ip` 與 `https://ipv6.yuaner.tw/ip` 並具備高可用自動備援機制）。
   - `interface`：網卡 IP 讀取與正則/索引 (`@1`, `@2`) 匹配。

@@ -52,79 +52,85 @@
             
             <hr style="border-color: var(--border-color); margin: 20px 0;">
             
-            <!-- IPv4 Strategy -->
+            <!-- IPv4 Strategy Section -->
             <div class="card" style="background-color: var(--input-bg);">
-                <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--primary);">IPv4 設定策略</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label">啟用 IPv4</label>
-                        <select name="ipv4_enabled" class="form-control">
-                            <option value="true" {{if .EditHost.IPv4.Enabled}}selected{{end}}>啟用</option>
-                            <option value="false" {{if not .EditHost.IPv4.Enabled}}selected{{end}}>停用</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">IPv4 模式 (Mode)</label>
-                        <select name="ipv4_mode" class="form-control" hx-post="/api/preview" hx-target="#ipv4-preview" hx-trigger="change">
-                            <option value="external_api" {{if eq .EditHost.IPv4.Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
-                            <option value="interface" {{if eq .EditHost.IPv4.Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
-                            <option value="base_offset" {{if eq .EditHost.IPv4.Mode "base_offset"}}selected{{end}}>base_offset (學術網段 + 偏移量)</option>
-                            <option value="arp_mac" {{if eq .EditHost.IPv4.Mode "arp_mac"}}selected{{end}}>arp_mac (ARP / 鄰居表 MAC 探測)</option>
-                        </select>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="font-size: 1rem; color: var(--primary);">IPv4 設定策略</h3>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox" name="ipv4_enabled" value="true" {{if .EditHost.IPv4.Enabled}}checked{{end}} onchange="togglePseudoDisabled('ipv4-card-body', this.checked)"> 啟用 IPv4
+                        </label>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCollapse('ipv4-card-body')">展開 / 收合</button>
                     </div>
                 </div>
-                
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label">網卡介面 (Interface)</label>
-                        <input type="text" name="ipv4_interface" class="form-control" value="{{.EditHost.IPv4.Interface}}" placeholder="eth0">
+
+                <div id="ipv4-card-body" class="{{if not .EditHost.IPv4.Enabled}}pseudo-disabled{{end}}">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">IPv4 模式 (Mode)</label>
+                            <select name="ipv4_mode" class="form-control" hx-post="/api/preview" hx-target="#ipv4-preview" hx-trigger="change">
+                                <option value="external_api" {{if eq .EditHost.IPv4.Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
+                                <option value="interface" {{if eq .EditHost.IPv4.Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
+                                <option value="base_offset" {{if eq .EditHost.IPv4.Mode "base_offset"}}selected{{end}}>base_offset (學術網段 + 偏移量)</option>
+                                <option value="arp_mac" {{if eq .EditHost.IPv4.Mode "arp_mac"}}selected{{end}}>arp_mac (ARP / 鄰居表 MAC 探測)</option>
+                                <option value="command" {{if eq .EditHost.IPv4.Mode "command"}}selected{{end}}>command (自訂 Bash 指令輸出)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">網卡介面 (Interface)</label>
+                            <input type="text" name="ipv4_interface" class="form-control" value="{{.EditHost.IPv4.Interface}}" placeholder="eth0">
+                        </div>
                     </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">匹配條件 / 偏移量 / MAC</label>
-                        <input type="text" name="ipv4_val" class="form-control" value="{{if .EditHost.IPv4.Match}}{{.EditHost.IPv4.Match}}{{else if .EditHost.IPv4.Offset}}{{.EditHost.IPv4.Offset}}{{else if .EditHost.IPv4.MAC}}{{.EditHost.IPv4.MAC}}{{end}}" placeholder="例如 @1 或 10 或 00:11:22:33:44:55">
+                        <label class="form-label">匹配條件 / 偏移量 / MAC / API URL / Bash 指令</label>
+                        <input type="text" name="ipv4_val" class="form-control" value="{{if .EditHost.IPv4.Match}}{{.EditHost.IPv4.Match}}{{else if .EditHost.IPv4.Offset}}{{.EditHost.IPv4.Offset}}{{else if .EditHost.IPv4.MAC}}{{.EditHost.IPv4.MAC}}{{else if .EditHost.IPv4.Command}}{{.EditHost.IPv4.Command}}{{else if .EditHost.IPv4.URL}}{{.EditHost.IPv4.URL}}{{end}}" placeholder="例如 @1 或 10 或 curl -s http://checkip.amazonaws.com">
                     </div>
-                </div>
-                
-                <div id="ipv4-preview" class="preview-box">
-                    🔍 IPv4 即時預覽: {{if .EditHost.IPv4.LastIP}}{{.EditHost.IPv4.LastIP}}{{else}}尚未計算{{end}}
+                    
+                    <div id="ipv4-preview" class="preview-box">
+                        🔍 IPv4 即時預覽: {{if .EditHost.IPv4.LastIP}}{{.EditHost.IPv4.LastIP}}{{else}}尚未計算{{end}}
+                    </div>
                 </div>
             </div>
             
-            <!-- IPv6 Strategy -->
+            <!-- IPv6 Strategy Section -->
             <div class="card" style="background-color: var(--input-bg);">
-                <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--primary);">IPv6 設定策略</h3>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label">啟用 IPv6</label>
-                        <select name="ipv6_enabled" class="form-control">
-                            <option value="true" {{if .EditHost.IPv6.Enabled}}selected{{end}}>啟用</option>
-                            <option value="false" {{if not .EditHost.IPv6.Enabled}}selected{{end}}>停用</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">IPv6 模式 (Mode)</label>
-                        <select name="ipv6_mode" class="form-control" hx-post="/api/preview" hx-target="#ipv6-preview" hx-trigger="change">
-                            <option value="prefix_stitching" {{if eq .EditHost.IPv6.Mode "prefix_stitching"}}selected{{end}}>prefix_stitching (動態前綴 + 固定後綴)</option>
-                            <option value="eui64_mac" {{if eq .EditHost.IPv6.Mode "eui64_mac"}}selected{{end}}>eui64_mac (動態前綴 + MAC 轉算)</option>
-                            <option value="external_api" {{if eq .EditHost.IPv6.Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
-                            <option value="interface" {{if eq .EditHost.IPv6.Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
-                        </select>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 style="font-size: 1rem; color: var(--primary);">IPv6 設定策略</h3>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="cursor: pointer; font-size: 0.85rem;">
+                            <input type="checkbox" name="ipv6_enabled" value="true" {{if .EditHost.IPv6.Enabled}}checked{{end}} onchange="togglePseudoDisabled('ipv6-card-body', this.checked)"> 啟用 IPv6
+                        </label>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCollapse('ipv6-card-body')">展開 / 收合</button>
                     </div>
                 </div>
-                
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label">網卡介面 (Interface)</label>
-                        <input type="text" name="ipv6_interface" class="form-control" value="{{.EditHost.IPv6.Interface}}" placeholder="eth0">
+
+                <div id="ipv6-card-body" class="{{if not .EditHost.IPv6.Enabled}}pseudo-disabled{{end}}">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">IPv6 模式 (Mode)</label>
+                            <select name="ipv6_mode" class="form-control" hx-post="/api/preview" hx-target="#ipv6-preview" hx-trigger="change">
+                                <option value="prefix_stitching" {{if eq .EditHost.IPv6.Mode "prefix_stitching"}}selected{{end}}>prefix_stitching (動態前綴 + 固定後綴)</option>
+                                <option value="eui64_mac" {{if eq .EditHost.IPv6.Mode "eui64_mac"}}selected{{end}}>eui64_mac (動態前綴 + MAC 轉算)</option>
+                                <option value="external_api" {{if eq .EditHost.IPv6.Mode "external_api"}}selected{{end}}>external_api (外網 API 查詢)</option>
+                                <option value="interface" {{if eq .EditHost.IPv6.Mode "interface"}}selected{{end}}>interface (網卡 IP 讀取)</option>
+                                <option value="command" {{if eq .EditHost.IPv6.Mode "command"}}selected{{end}}>command (自訂 Bash 指令輸出)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">網卡介面 (Interface)</label>
+                            <input type="text" name="ipv6_interface" class="form-control" value="{{.EditHost.IPv6.Interface}}" placeholder="eth0">
+                        </div>
                     </div>
+                    
                     <div class="form-group">
-                        <label class="form-label">固定後綴 (Suffix) 或 MAC 地址</label>
-                        <input type="text" name="ipv6_val" class="form-control" value="{{if .EditHost.IPv6.Suffix}}{{.EditHost.IPv6.Suffix}}{{else if .EditHost.IPv6.MAC}}{{.EditHost.IPv6.MAC}}{{end}}" placeholder="例如 ::100 或 bc:24:11:af:7d:fb">
+                        <label class="form-label">固定後綴 (Suffix) / MAC / API URL / Bash 指令</label>
+                        <input type="text" name="ipv6_val" class="form-control" value="{{if .EditHost.IPv6.Suffix}}{{.EditHost.IPv6.Suffix}}{{else if .EditHost.IPv6.MAC}}{{.EditHost.IPv6.MAC}}{{else if .EditHost.IPv6.Match}}{{.EditHost.IPv6.Match}}{{else if .EditHost.IPv6.Command}}{{.EditHost.IPv6.Command}}{{else if .EditHost.IPv6.URL}}{{.EditHost.IPv6.URL}}{{end}}" placeholder="例如 ::100 或 curl -s http://v6.ident.me">
                     </div>
-                </div>
-                
-                <div id="ipv6-preview" class="preview-box">
-                    🔍 IPv6 即時預覽: {{if .EditHost.IPv6.LastIP}}{{.EditHost.IPv6.LastIP}}{{else}}尚未計算{{end}}
+                    
+                    <div id="ipv6-preview" class="preview-box">
+                        🔍 IPv6 即時預覽: {{if .EditHost.IPv6.LastIP}}{{.EditHost.IPv6.LastIP}}{{else}}尚未計算{{end}}
+                    </div>
                 </div>
             </div>
             
@@ -136,79 +142,198 @@
     </div>
 
 {{else}}
-    <!-- Main Dashboard View with Batch Form -->
+    <!-- Main Dashboard View with Provider Grouping and CSV Import/Export -->
     <div class="card">
         <form action="/hosts/batch" method="POST" id="batch-form">
             <div class="toolbar">
-                <a href="/hosts/edit?id=" class="btn btn-primary">+ 新增主機</a>
+                <a href="/hosts/edit?id=" class="btn btn-primary">+ 新增單一主機</a>
+                <a href="/hosts/batch-add" class="btn btn-primary">➕ 新增大量主機</a>
+                <button type="submit" formaction="/hosts/batch-edit" id="btn-batch-edit" class="btn btn-secondary" disabled>✏️ 批量編輯</button>
                 <button type="submit" name="action" value="sync" class="btn btn-secondary">⚡ 批量立即同步</button>
                 <button type="submit" name="action" value="enable" class="btn btn-secondary">✅ 批量啟用</button>
                 <button type="submit" name="action" value="disable" class="btn btn-secondary">⛔ 批量關閉</button>
                 <button type="submit" name="action" value="delete" class="btn btn-danger" onclick="return confirm('確定要刪除選取的主機嗎？')">🗑️ 批量刪除</button>
+                
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <a href="/hosts/export.csv" class="btn btn-secondary btn-sm">📤 匯出 CSV</a>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">📥 匯入 CSV</button>
+                </div>
+            </div>
+
+            <!-- CSV Import Modal/Card (Hidden by default) -->
+            <div id="csv-import-box" class="card" style="display: none; background-color: var(--input-bg); margin-bottom: 20px;">
+                <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">📥 匯入 CSV 主機清單</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">貼上 CSV 內容或選擇 .csv 檔案上傳（格式需同匯出欄位）：</p>
+                <textarea name="csv_content" id="csv-text" class="form-control" placeholder="id,name,enabled,provider,domains,proxied,ipv4_enabled,ipv4_mode..."></textarea>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button type="submit" formaction="/hosts/import.csv" class="btn btn-primary btn-sm">開始匯入</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">取消</button>
+                </div>
             </div>
             
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 40px;"><input type="checkbox" id="select-all" onclick="toggleAll(this)"></th>
-                            <th>狀態</th>
-                            <th>主機名稱</th>
-                            <th>綁定域名</th>
-                            <th>IPv4 (模式 & 預覽 IP)</th>
-                            <th>IPv6 (模式 & 預覽 IP)</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{range .Hosts}}
-                        <tr>
-                            <td><input type="checkbox" name="host_ids" value="{{.ID}}"></td>
-                            <td>
-                                {{if .Enabled}}
-                                <span class="badge badge-success">已啟用</span>
-                                {{else}}
-                                <span class="badge badge-muted">關閉</span>
+            {{range $providerID, $providerHosts := .GroupedHosts}}
+            <!-- Collapsible Group for Each DNS Provider -->
+            <details open class="provider-group">
+                <summary>
+                    <div>
+                        🔌 DNS Provider: <strong style="color: var(--primary);">{{$providerID}}</strong>
+                        <span class="badge badge-muted" style="margin-left: 8px;">{{len $providerHosts}} 台主機</span>
+                    </div>
+                </summary>
+                
+                <div class="provider-group-content">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;">選取</th>
+                                    <th>狀態</th>
+                                    <th>主機名稱</th>
+                                    <th>綁定域名</th>
+                                    <th>IPv4 (模式 & 預覽 IP)</th>
+                                    <th>IPv6 (模式 & 預覽 IP)</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range $providerHosts}}
+                                <tr>
+                                    <td><input type="checkbox" name="host_ids" value="{{.ID}}" data-provider="{{.Provider}}" onchange="checkBatchEditStatus()"></td>
+                                    <td>
+                                        {{if .Enabled}}
+                                        <span class="badge badge-success">已啟用</span>
+                                        {{else}}
+                                        <span class="badge badge-muted">關閉</span>
+                                        {{end}}
+                                    </td>
+                                    <td><strong>{{.Name}}</strong></td>
+                                    <td>
+                                        {{range .Domains}}
+                                        <div><code>{{.}}</code></div>
+                                        {{end}}
+                                    </td>
+                                    <td>
+                                        {{if .IPv4.Enabled}}
+                                        <span class="badge badge-warning">{{.IPv4.Mode}}</span>
+                                        <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}-{{end}}</div>
+                                        {{else}}
+                                        <span class="badge badge-muted">未啟用</span>
+                                        {{end}}
+                                    </td>
+                                    <td>
+                                        {{if .IPv6.Enabled}}
+                                        <span class="badge badge-warning">{{.IPv6.Mode}}</span>
+                                        <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}-{{end}}</div>
+                                        {{else}}
+                                        <span class="badge badge-muted">未啟用</span>
+                                        {{end}}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 6px;">
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleHostDetail('detail-{{.ID}}', this)">▼ 展開</button>
+                                            <a href="/hosts/edit?id={{.ID}}" class="btn btn-secondary btn-sm">編輯</a>
+                                            <a href="/logs?host_id={{.ID}}" class="btn btn-secondary btn-sm">📜 日誌</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- Expandable Detail Row -->
+                                <tr id="detail-{{.ID}}" style="display: none; background-color: var(--input-bg);">
+                                    <td colspan="7" style="padding: 16px;">
+                                        <div class="grid-2" style="font-size: 0.85rem;">
+                                            <div>
+                                                <strong style="color: var(--primary);">IPv4 詳細設定:</strong>
+                                                <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else}}eth0{{end}}</code></div>
+                                                <div>參數 / 指令: <code>{{if .IPv4.Match}}{{.IPv4.Match}}{{else if .IPv4.Offset}}{{.IPv4.Offset}}{{else if .IPv4.MAC}}{{.IPv4.MAC}}{{else if .IPv4.Command}}{{.IPv4.Command}}{{else if .IPv4.URL}}{{.IPv4.URL}}{{else}}-{{end}}</code></div>
+                                                <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                            </div>
+                                            <div>
+                                                <strong style="color: var(--primary);">IPv6 詳細設定:</strong>
+                                                <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else}}eth0{{end}}</code></div>
+                                                <div>參數 / 指令: <code>{{if .IPv6.Suffix}}{{.IPv6.Suffix}}{{else if .IPv6.MAC}}{{.IPv6.MAC}}{{else if .IPv6.Match}}{{.IPv6.Match}}{{else if .IPv6.Command}}{{.IPv6.Command}}{{else if .IPv6.URL}}{{.IPv6.URL}}{{else}}-{{end}}</code></div>
+                                                <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {{end}}
-                            </td>
-                            <td><strong>{{.Name}}</strong></td>
-                            <td>
-                                {{range .Domains}}
-                                <div><code>{{.}}</code></div>
-                                {{end}}
-                            </td>
-                            <td>
-                                {{if .IPv4.Enabled}}
-                                <span class="badge badge-warning">{{.IPv4.Mode}}</span>
-                                <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}-{{end}}</div>
-                                {{else}}
-                                <span class="badge badge-muted">未啟用</span>
-                                {{end}}
-                            </td>
-                            <td>
-                                {{if .IPv6.Enabled}}
-                                <span class="badge badge-warning">{{.IPv6.Mode}}</span>
-                                <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}-{{end}}</div>
-                                {{else}}
-                                <span class="badge badge-muted">未啟用</span>
-                                {{end}}
-                            </td>
-                            <td>
-                                <a href="/hosts/edit?id={{.ID}}" class="btn btn-secondary btn-sm">編輯</a>
-                                <a href="/logs?host_id={{.ID}}" class="btn btn-secondary btn-sm">📜 查看日誌</a>
-                            </td>
-                        </tr>
-                        {{else}}
-                        <tr>
-                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">目前沒有設定任何主機，點擊「新增主機」開始。</td>
-                        </tr>
-                        {{end}}
-                    </tbody>
-                </table>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+            {{else}}
+            <div class="card" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                目前沒有設定任何主機，點擊上方「新增單一主機」或「新增大量主機」開始。
             </div>
+            {{end}}
         </form>
     </div>
 {{end}}
 
 </div>
+
+<script>
+function toggleHostDetail(rowId, btn) {
+    var row = document.getElementById(rowId);
+    if (!row) return;
+    if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        btn.innerText = '▲ 收合';
+    } else {
+        row.style.display = 'none';
+        btn.innerText = '▼ 展開';
+    }
+}
+function togglePseudoDisabled(elementId, isChecked) {
+    var el = document.getElementById(elementId);
+    if (!el) return;
+    if (isChecked) {
+        el.classList.remove('pseudo-disabled');
+    } else {
+        el.classList.add('pseudo-disabled');
+    }
+}
+
+function toggleCollapse(elementId) {
+    var el = document.getElementById(elementId);
+    if (!el) return;
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+function toggleCsvImportModal() {
+    var box = document.getElementById('csv-import-box');
+    if (!box) return;
+    box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+}
+
+function checkBatchEditStatus() {
+    var checked = document.querySelectorAll('input[name="host_ids"]:checked');
+    var btn = document.getElementById('btn-batch-edit');
+    if (!btn) return;
+
+    if (checked.length === 0) {
+        btn.disabled = true;
+        return;
+    }
+
+    var firstProvider = null;
+    var sameProvider = true;
+
+    checked.forEach(function(cb) {
+        var p = cb.getAttribute('data-provider');
+        if (firstProvider === null) {
+            firstProvider = p;
+        } else if (firstProvider !== p) {
+            sameProvider = false;
+        }
+    });
+
+    btn.disabled = !sameProvider;
+}
+</script>
+
 {{template "footer" .}}

@@ -6,12 +6,15 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 
 	"muddns/config"
 	"muddns/ipfetcher"
 	"muddns/logger"
 	"muddns/provider"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Server struct {
@@ -21,16 +24,37 @@ type Server struct {
 }
 
 type PageData struct {
-	ActiveTab      string
-	Hosts          []config.Host
-	Providers      map[string]config.Provider
-	EditHost       *config.Host
-	EditProvider   *config.Provider
-	EditProviderID string
-	Logs           []logger.LogEntry
-	WebAuth        config.WebAuth
-	Message        string
-	Error          string
+	ActiveTab           string
+	Hosts               []config.Host
+	GroupedHosts        map[string][]config.Host
+	Providers           map[string]config.Provider
+	EditHost            *config.Host
+	EditProvider        *config.Provider
+	EditProviderID      string
+	RawYAML             string
+	IsBatchEdit         bool
+	CommonProvider      string
+	CommonIPv4Enabled   bool
+	CommonIPv4Mode      string
+	CommonIPv4Interface string
+	CommonIPv6Enabled   bool
+	CommonIPv6Mode      string
+	CommonIPv6Interface string
+	BatchRows           []BatchRow
+	Logs                []logger.LogEntry
+	WebAuth             config.WebAuth
+	Message             string
+	Error               string
+}
+
+type BatchRow struct {
+	ID        string
+	Name      string
+	Enabled   bool
+	DomainStr string
+	IPv4Val   string
+	IPv6Val   string
+	Proxied   bool
 }
 
 func NewServer(cfg *config.Config, configPath string, tmplFS fs.FS) (*Server, error) {
@@ -51,10 +75,16 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/hosts/edit", s.requireAuth(s.handleHostEdit))
 	mux.HandleFunc("/hosts/save", s.requireAuth(s.handleHostSave))
 	mux.HandleFunc("/hosts/batch", s.requireAuth(s.handleHostBatch))
+	mux.HandleFunc("/hosts/batch-add", s.requireAuth(s.handleHostsBatchAdd))
+	mux.HandleFunc("/hosts/batch-edit", s.requireAuth(s.handleHostsBatchEdit))
+	mux.HandleFunc("/hosts/batch-save", s.requireAuth(s.handleHostsBatchSave))
+	mux.HandleFunc("/hosts/export.csv", s.requireAuth(s.handleHostsExportCSV))
+	mux.HandleFunc("/hosts/import.csv", s.requireAuth(s.handleHostsImportCSV))
 	mux.HandleFunc("/providers", s.requireAuth(s.handleProviders))
 	mux.HandleFunc("/providers/edit", s.requireAuth(s.handleProviderEdit))
 	mux.HandleFunc("/providers/save", s.requireAuth(s.handleProviderSave))
 	mux.HandleFunc("/providers/delete", s.requireAuth(s.handleProviderDelete))
+	mux.HandleFunc("/config/raw", s.requireAuth(s.handleConfigRaw))
 	mux.HandleFunc("/logs", s.requireAuth(s.handleLogs))
 	mux.HandleFunc("/settings", s.requireAuth(s.handleSettings))
 	mux.HandleFunc("/api/preview", s.requireAuth(s.handlePreview))
@@ -85,10 +115,20 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	grouped := make(map[string][]config.Host)
+	for _, h := range s.cfg.Hosts {
+		p := h.Provider
+		if p == "" {
+			p = "default"
+		}
+		grouped[p] = append(grouped[p], h)
+	}
+
 	data := PageData{
-		ActiveTab: "dashboard",
-		Hosts:     s.cfg.Hosts,
-		Providers: s.cfg.Providers,
+		ActiveTab:    "dashboard",
+		Hosts:        s.cfg.Hosts,
+		GroupedHosts: grouped,
+		Providers:    s.cfg.Providers,
 	}
 	s.tmpl.ExecuteTemplate(w, "dashboard.html", data)
 }
@@ -162,6 +202,8 @@ func (s *Server) handleHostSave(w http.ResponseWriter, r *http.Request) {
 		ipv4Cfg.Offset = ipv4Val
 	case "arp_mac":
 		ipv4Cfg.MAC = ipv4Val
+	case "command":
+		ipv4Cfg.Command = ipv4Val
 	}
 
 	ipv6Cfg := config.IPConfig{
@@ -178,6 +220,8 @@ func (s *Server) handleHostSave(w http.ResponseWriter, r *http.Request) {
 		ipv6Cfg.Suffix = ipv6Val
 	case "eui64_mac":
 		ipv6Cfg.MAC = ipv6Val
+	case "command":
+		ipv6Cfg.Command = ipv6Val
 	}
 
 	// Calculate current preview IPs
@@ -549,6 +593,10 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 			ipCfg.Suffix = val
 		case "eui64_mac":
 			ipCfg.MAC = val
+		case "interface":
+			ipCfg.Match = val
+		case "command":
+			ipCfg.Command = val
 		}
 	} else {
 		val := r.FormValue("ipv4_val")
@@ -559,6 +607,8 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 			ipCfg.Offset = val
 		case "arp_mac":
 			ipCfg.MAC = val
+		case "command":
+			ipCfg.Command = val
 		}
 	}
 
@@ -581,4 +631,311 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", `Basic realm="muddns"`)
 	http.Error(w, "Logged out", http.StatusUnauthorized)
+}
+
+func (s *Server) handleConfigRaw(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		r.ParseForm()
+		raw := r.FormValue("raw_yaml")
+
+		testCfg := &config.Config{}
+		if err := yaml.Unmarshal([]byte(raw), testCfg); err != nil {
+			data := PageData{
+				ActiveTab: "config_raw",
+				RawYAML:   raw,
+				Error:     fmt.Sprintf("YAML 語法解析錯誤: %v", err),
+			}
+			s.tmpl.ExecuteTemplate(w, "config_raw.html", data)
+			return
+		}
+
+		if err := os.WriteFile(s.configPath, []byte(raw), 0644); err != nil {
+			data := PageData{
+				ActiveTab: "config_raw",
+				RawYAML:   raw,
+				Error:     fmt.Sprintf("寫入設定檔失敗: %v", err),
+			}
+			s.tmpl.ExecuteTemplate(w, "config_raw.html", data)
+			return
+		}
+
+		newCfg, err := config.LoadConfig(s.configPath)
+		if err == nil {
+			s.cfg = newCfg
+		}
+
+		logger.Log(logger.SUCCESS, "", "RAW config.yaml 已成功更新！")
+		data := PageData{
+			ActiveTab: "config_raw",
+			RawYAML:   raw,
+			Message:   "config.yaml 原始設定檔已成功儲存並重新載入！",
+		}
+		s.tmpl.ExecuteTemplate(w, "config_raw.html", data)
+		return
+	}
+
+	rawBytes, _ := os.ReadFile(s.configPath)
+	data := PageData{
+		ActiveTab: "config_raw",
+		RawYAML:   string(rawBytes),
+	}
+	s.tmpl.ExecuteTemplate(w, "config_raw.html", data)
+}
+
+func (s *Server) handleHostsExportCSV(w http.ResponseWriter, r *http.Request) {
+	csvStr, err := s.cfg.ExportCSV()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"muddns_hosts.csv\"")
+	w.Write([]byte(csvStr))
+}
+
+func (s *Server) handleHostsImportCSV(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseForm()
+	content := r.FormValue("csv_content")
+	count, err := s.cfg.ImportCSV(content)
+	if err != nil {
+		logger.Log(logger.ERROR, "", "CSV Import failed: %v", err)
+	} else {
+		s.cfg.Save(s.configPath)
+		logger.Log(logger.SUCCESS, "", "成功匯入 %d 台主機設定！", count)
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (s *Server) handleHostsBatchAdd(w http.ResponseWriter, r *http.Request) {
+	data := PageData{
+		ActiveTab:           "dashboard",
+		Providers:           s.cfg.Providers,
+		IsBatchEdit:         false,
+		CommonIPv4Enabled:   true,
+		CommonIPv4Mode:      "external_api",
+		CommonIPv4Interface: "eth0",
+		CommonIPv6Enabled:   true,
+		CommonIPv6Mode:      "prefix_stitching",
+		CommonIPv6Interface: "eth0",
+	}
+	s.tmpl.ExecuteTemplate(w, "batch_hosts.html", data)
+}
+
+func (s *Server) handleHostsBatchEdit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseForm()
+	selectedIDs := r.Form["host_ids"]
+	if len(selectedIDs) == 0 {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	selectedMap := make(map[string]bool)
+	for _, id := range selectedIDs {
+		selectedMap[id] = true
+	}
+
+	var targetHosts []config.Host
+	var firstProvider string
+	for _, h := range s.cfg.Hosts {
+		if selectedMap[h.ID] {
+			if firstProvider == "" {
+				firstProvider = h.Provider
+			}
+			if h.Provider == firstProvider {
+				targetHosts = append(targetHosts, h)
+			}
+		}
+	}
+
+	if len(targetHosts) == 0 {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	v4ModeCount := make(map[string]int)
+	v6ModeCount := make(map[string]int)
+	for _, h := range targetHosts {
+		if h.IPv4.Enabled { v4ModeCount[h.IPv4.Mode]++ }
+		if h.IPv6.Enabled { v6ModeCount[h.IPv6.Mode]++ }
+	}
+
+	mostV4Mode := "external_api"
+	maxV4 := 0
+	for m, c := range v4ModeCount {
+		if c > maxV4 { maxV4 = c; mostV4Mode = m }
+	}
+
+	mostV6Mode := "prefix_stitching"
+	maxV6 := 0
+	for m, c := range v6ModeCount {
+		if c > maxV6 { maxV6 = c; mostV6Mode = m }
+	}
+
+	var batchRows []BatchRow
+	excludedCount := 0
+	for _, h := range targetHosts {
+		if h.IPv4.Enabled && h.IPv4.Mode != mostV4Mode {
+			excludedCount++
+			continue
+		}
+		if h.IPv6.Enabled && h.IPv6.Mode != mostV6Mode {
+			excludedCount++
+			continue
+		}
+
+		v4Val := h.IPv4.Match
+		if h.IPv4.Offset != "" { v4Val = h.IPv4.Offset }
+		if h.IPv4.MAC != "" { v4Val = h.IPv4.MAC }
+		if h.IPv4.URL != "" { v4Val = h.IPv4.URL }
+
+		v6Val := h.IPv6.Suffix
+		if h.IPv6.MAC != "" { v6Val = h.IPv6.MAC }
+		if h.IPv6.Match != "" { v6Val = h.IPv6.Match }
+		if h.IPv6.URL != "" { v6Val = h.IPv6.URL }
+
+		batchRows = append(batchRows, BatchRow{
+			ID:        h.ID,
+			Name:      h.Name,
+			DomainStr: strings.Join(h.Domains, ","),
+			IPv4Val:   v4Val,
+			IPv6Val:   v6Val,
+		})
+	}
+
+	msg := ""
+	if excludedCount > 0 {
+		msg = fmt.Sprintf("已自動排除 %d 台模式 (Mode) 不符的主機，本次僅編輯相同模式的主機。", excludedCount)
+	}
+
+	data := PageData{
+		ActiveTab:           "dashboard",
+		Providers:           s.cfg.Providers,
+		IsBatchEdit:         true,
+		CommonProvider:      firstProvider,
+		CommonIPv4Enabled:   true,
+		CommonIPv4Mode:      mostV4Mode,
+		CommonIPv4Interface: "eth0",
+		CommonIPv6Enabled:   true,
+		CommonIPv6Mode:      mostV6Mode,
+		CommonIPv6Interface: "eth0",
+		BatchRows:           batchRows,
+		Message:             msg,
+	}
+	s.tmpl.ExecuteTemplate(w, "batch_hosts.html", data)
+}
+
+func (s *Server) handleHostsBatchSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseForm()
+	providerID := r.FormValue("common_provider")
+	v4Enabled := r.FormValue("common_ipv4_enabled") == "true"
+	v4Mode := r.FormValue("common_ipv4_mode")
+	v4Iface := r.FormValue("common_ipv4_interface")
+
+	v6Enabled := r.FormValue("common_ipv6_enabled") == "true"
+	v6Mode := r.FormValue("common_ipv6_mode")
+	v6Iface := r.FormValue("common_ipv6_interface")
+
+	rowIndices := r.Form["row_index"]
+	names := r.Form["row_name"]
+	domainsList := r.Form["row_domains"]
+	v4Vals := r.Form["row_ipv4_val"]
+	v6Vals := r.Form["row_ipv6_val"]
+
+	for i, idxStr := range rowIndices {
+		if i >= len(names) || i >= len(domainsList) {
+			continue
+		}
+		name := strings.TrimSpace(names[i])
+		if name == "" {
+			continue
+		}
+
+		domStr := strings.TrimSpace(domainsList[i])
+		if domStr == "" {
+			continue
+		}
+		rawDomains := strings.FieldsFunc(domStr, func(c rune) bool {
+			return c == ',' || c == ';' || c == ' '
+		})
+
+		v4Val := ""
+		if i < len(v4Vals) { v4Val = strings.TrimSpace(v4Vals[i]) }
+		v6Val := ""
+		if i < len(v6Vals) { v6Val = strings.TrimSpace(v6Vals[i]) }
+
+		rowEnabled := r.FormValue("row_enabled_"+idxStr) == "true"
+		rowProxied := r.FormValue("row_proxied_"+idxStr) == "true"
+
+		v4Cfg := config.IPConfig{
+			Enabled:   v4Enabled,
+			Mode:      v4Mode,
+			Interface: v4Iface,
+		}
+		switch v4Mode {
+		case "external_api": v4Cfg.URL = v4Val
+		case "interface": v4Cfg.Match = v4Val
+		case "base_offset": v4Cfg.Offset = v4Val
+		case "arp_mac": v4Cfg.MAC = v4Val
+		case "command": v4Cfg.Command = v4Val
+		}
+
+		v6Cfg := config.IPConfig{
+			Enabled:   v6Enabled,
+			Mode:      v6Mode,
+			Interface: v6Iface,
+		}
+		switch v6Mode {
+		case "prefix_stitching": v6Cfg.Suffix = v6Val
+		case "eui64_mac": v6Cfg.MAC = v6Val
+		case "interface": v6Cfg.Match = v6Val
+		case "external_api": v6Cfg.URL = v6Val
+		case "command": v6Cfg.Command = v6Val
+		}
+
+		id := fmt.Sprintf("host-%d", len(s.cfg.Hosts)+1)
+		host := config.Host{
+			ID:       id,
+			Name:     name,
+			Enabled:  rowEnabled,
+			Provider: providerID,
+			Domains:  rawDomains,
+			Proxied:  rowProxied,
+			IPv4:     v4Cfg,
+			IPv6:     v6Cfg,
+		}
+
+		// Update or append
+		found := false
+		for idx, existing := range s.cfg.Hosts {
+			if existing.Name == name || (len(existing.Domains) > 0 && len(rawDomains) > 0 && existing.Domains[0] == rawDomains[0]) {
+				host.ID = existing.ID
+				s.cfg.Hosts[idx] = host
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.cfg.Hosts = append(s.cfg.Hosts, host)
+		}
+	}
+
+	s.cfg.Save(s.configPath)
+	logger.Log(logger.SUCCESS, "", "批量儲存主機完成！")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

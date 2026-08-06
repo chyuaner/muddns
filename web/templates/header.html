@@ -163,6 +163,43 @@
         .log-level-ERROR { color: var(--danger); }
         
         .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        /* Pseudo-Disabled Styling for Form Sections */
+        .pseudo-disabled {
+            opacity: 0.5;
+            color: var(--text-muted);
+            transition: opacity 0.2s;
+        }
+        .pseudo-disabled input, .pseudo-disabled select {
+            color: var(--text-muted);
+            border-style: dashed;
+        }
+
+        /* Collapsible Provider Group Card */
+        details.provider-group {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        details.provider-group > summary {
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        details.provider-group > summary::-webkit-details-marker { display: none; }
+        details.provider-group[open] > summary {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .provider-group-content {
+            padding: 20px;
+        }
     </style>
     <!-- HTMX for optional progressive enhancement -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -170,10 +207,11 @@
 <body>
 
 <header>
-    <div class="logo">🌐 muddns</div>
+    <a href="/" class="logo" style="text-decoration: none;">🌐 muddns</a>
     <nav>
         <a href="/" class="{{if eq .ActiveTab "dashboard"}}active{{end}}">📊 主控板</a>
         <a href="/providers" class="{{if eq .ActiveTab "providers"}}active{{end}}">🔌 DNS 服務商</a>
+        <a href="/config/raw" class="{{if eq .ActiveTab "config_raw"}}active{{end}}">📄 RAW Config</a>
         <a href="/logs" class="{{if eq .ActiveTab "logs"}}active{{end}}">📜 系統日誌</a>
         <a href="/settings" class="{{if eq .ActiveTab "settings"}}active{{end}}">⚙️ 全局設定</a>
         <button id="theme-toggle" class="btn btn-secondary btn-sm" onclick="toggleTheme()" style="margin-left: 8px;">🌙</button>

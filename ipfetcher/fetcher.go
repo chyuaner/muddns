@@ -2,6 +2,9 @@ package ipfetcher
 
 import (
 	"fmt"
+	"net"
+	"os/exec"
+	"strings"
 
 	"muddns/config"
 )
@@ -14,6 +17,28 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 	switch ipCfg.Mode {
 	case "external_api":
 		return FetchExternalIP(ipCfg.URL, isIPv6, defaults, hostID)
+
+	case "command":
+		if strings.TrimSpace(ipCfg.Command) == "" {
+			return "", fmt.Errorf("command 模式下未提供 bash 指令")
+		}
+		cmd := exec.Command("bash", "-c", ipCfg.Command)
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("執行指令失敗: %w", err)
+		}
+		ipStr := strings.TrimSpace(string(out))
+		parsedIP := net.ParseIP(ipStr)
+		if parsedIP == nil {
+			return "", fmt.Errorf("指令輸出內容 %q 不是有效的 IP 地址", ipStr)
+		}
+		if isIPv6 && parsedIP.To4() != nil {
+			return "", fmt.Errorf("指令輸出 %q 為 IPv4，預期為 IPv6", ipStr)
+		}
+		if !isIPv6 && parsedIP.To4() == nil {
+			return "", fmt.Errorf("指令輸出 %q 為 IPv6，預期為 IPv4", ipStr)
+		}
+		return ipStr, nil
 
 	case "interface":
 		iface := ipCfg.Interface

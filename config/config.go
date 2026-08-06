@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
@@ -72,13 +74,36 @@ type IPConfig struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
-	// If config file doesn't exist, try auto-generating from config.sample.yaml
+	// If config file doesn't exist, create a clean minimal default config directly from code
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		samplePath := "config.sample.yaml"
-		if sampleData, sampleErr := os.ReadFile(samplePath); sampleErr == nil {
-			if writeErr := os.WriteFile(path, sampleData, 0644); writeErr == nil {
-				// Successfully initialized config.yaml from config.sample.yaml
-			}
+		defaultHash, _ := HashPassword("admin")
+		defaultCfg := &Config{
+			Settings: Settings{
+				Listen:          ":9876",
+				IntervalSeconds: 300,
+				WebAuth: WebAuth{
+					Enabled:      true,
+					Username:     "admin",
+					PasswordHash: defaultHash,
+				},
+			},
+			Defaults: Defaults{
+				IPv4APIs: []string{
+					"https://ipv4.yuaner.tw/ip",
+					"https://api.ipify.org",
+					"https://v4.ident.me",
+				},
+				IPv6APIs: []string{
+					"https://ipv6.yuaner.tw/ip",
+					"https://api6.ipify.org",
+					"https://v6.ident.me",
+				},
+			},
+			Providers: make(map[string]Provider),
+			Hosts:     []Host{},
+		}
+		if data, err := yaml.Marshal(defaultCfg); err == nil {
+			_ = os.WriteFile(path, data, 0644)
 		}
 	}
 
@@ -137,4 +162,125 @@ func (w *WebAuth) VerifyPassword(password string) bool {
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
+}
+
+func (c *Config) ExportCSV() (string, error) {
+	var sb strings.Builder
+	sb.WriteString("id,name,enabled,provider,domains,proxied,ipv4_enabled,ipv4_mode,ipv4_interface,ipv4_val,ipv6_enabled,ipv6_mode,ipv6_interface,ipv6_val\n")
+
+	for _, h := range c.Hosts {
+		domainStr := strings.Join(h.Domains, ";")
+		
+		v4Val := h.IPv4.Match
+		if h.IPv4.Offset != "" { v4Val = h.IPv4.Offset }
+		if h.IPv4.MAC != "" { v4Val = h.IPv4.MAC }
+		if h.IPv4.URL != "" { v4Val = h.IPv4.URL }
+		if h.IPv4.Command != "" { v4Val = h.IPv4.Command }
+
+		v6Val := h.IPv6.Suffix
+		if h.IPv6.MAC != "" { v6Val = h.IPv6.MAC }
+		if h.IPv6.Match != "" { v6Val = h.IPv6.Match }
+		if h.IPv6.URL != "" { v6Val = h.IPv6.URL }
+		if h.IPv6.Command != "" { v6Val = h.IPv6.Command }
+
+		line := fmt.Sprintf(
+			"%s,%s,%t,%s,%s,%t,%t,%s,%s,%s,%t,%s,%s,%s\n",
+			h.ID, h.Name, h.Enabled, h.Provider, domainStr, h.Proxied,
+			h.IPv4.Enabled, h.IPv4.Mode, h.IPv4.Interface, v4Val,
+			h.IPv6.Enabled, h.IPv6.Mode, h.IPv6.Interface, v6Val,
+		)
+		sb.WriteString(line)
+	}
+
+	return sb.String(), nil
+}
+
+func (c *Config) ImportCSV(csvContent string) (int, error) {
+	lines := strings.Split(csvContent, "\n")
+	if len(lines) < 2 {
+		return 0, fmt.Errorf("CSV 內容無有效資料列")
+	}
+
+	count := 0
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if i == 0 || line == "" {
+			continue // skip header
+		}
+
+		parts := strings.Split(line, ",")
+		if len(parts) < 14 {
+			continue
+		}
+
+		id := strings.TrimSpace(parts[0])
+		name := strings.TrimSpace(parts[1])
+		enabled := strings.TrimSpace(parts[2]) == "true"
+		provider := strings.TrimSpace(parts[3])
+		domains := strings.Split(strings.TrimSpace(parts[4]), ";")
+		proxied := strings.TrimSpace(parts[5]) == "true"
+
+		v4Enabled := strings.TrimSpace(parts[6]) == "true"
+		v4Mode := strings.TrimSpace(parts[7])
+		v4Iface := strings.TrimSpace(parts[8])
+		v4Val := strings.TrimSpace(parts[9])
+
+		v6Enabled := strings.TrimSpace(parts[10]) == "true"
+		v6Mode := strings.TrimSpace(parts[11])
+		v6Iface := strings.TrimSpace(parts[12])
+		v6Val := strings.TrimSpace(parts[13])
+
+		v4Cfg := IPConfig{
+			Enabled:   v4Enabled,
+			Mode:      v4Mode,
+			Interface: v4Iface,
+		}
+		switch v4Mode {
+		case "external_api": v4Cfg.URL = v4Val
+		case "interface": v4Cfg.Match = v4Val
+		case "base_offset": v4Cfg.Offset = v4Val
+		case "arp_mac": v4Cfg.MAC = v4Val
+		case "command": v4Cfg.Command = v4Val
+		}
+
+		v6Cfg := IPConfig{
+			Enabled:   v6Enabled,
+			Mode:      v6Mode,
+			Interface: v6Iface,
+		}
+		switch v6Mode {
+		case "prefix_stitching": v6Cfg.Suffix = v6Val
+		case "eui64_mac": v6Cfg.MAC = v6Val
+		case "interface": v6Cfg.Match = v6Val
+		case "external_api": v6Cfg.URL = v6Val
+		case "command": v6Cfg.Command = v6Val
+		}
+
+		host := Host{
+			ID:       id,
+			Name:     name,
+			Enabled:  enabled,
+			Provider: provider,
+			Domains:  domains,
+			Proxied:  proxied,
+			IPv4:     v4Cfg,
+			IPv6:     v6Cfg,
+		}
+
+		// Update or append
+		found := false
+		for idx, existing := range c.Hosts {
+			if existing.ID == id {
+				c.Hosts[idx] = host
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.Hosts = append(c.Hosts, host)
+		}
+		count++
+	}
+
+	return count, nil
 }

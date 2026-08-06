@@ -52,7 +52,13 @@
 
 ### 1. 編譯與安裝
 ```bash
-cd /home/yuan/Documents/Git/Yuan/muddns
+# 進入專案目錄
+cd muddns
+
+# 1. 下載並安裝第三方依賴套件 (相當於 npm install)
+go mod download
+
+# 2. 編譯為單一二進位執行檔
 go build -o muddns .
 ```
 

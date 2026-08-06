@@ -154,21 +154,7 @@
                 <button type="submit" name="action" value="disable" class="btn btn-secondary">⛔ 批量關閉</button>
                 <button type="submit" name="action" value="delete" class="btn btn-danger" onclick="return confirm('確定要刪除選取的主機嗎？')">🗑️ 批量刪除</button>
                 
-                <div style="margin-left: auto; display: flex; gap: 8px;">
-                    <a href="/hosts/export.csv" class="btn btn-secondary btn-sm" hx-boost="false">📤 匯出 CSV</a>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">📥 匯入 CSV</button>
-                </div>
-            </div>
 
-            <!-- CSV Import Modal/Card (Hidden by default) -->
-            <div id="csv-import-box" class="card expandable-panel" style="display: none; background-color: var(--input-bg); margin-bottom: 20px;">
-                <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">📥 匯入 CSV 主機清單</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">貼上 CSV 內容或選擇 .csv 檔案上傳（格式需同匯出欄位）：</p>
-                <textarea name="csv_content" id="csv-text" class="form-control" placeholder="id,name,enabled,provider,domains,proxied,ipv4_enabled,ipv4_mode..."></textarea>
-                <div style="margin-top: 12px; display: flex; gap: 8px;">
-                    <button type="submit" formaction="/hosts/import.csv" class="btn btn-primary btn-sm">開始匯入</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">取消</button>
-                </div>
             </div>
             
             {{if .Hosts}}
@@ -265,6 +251,22 @@
                 目前沒有設定任何主機，點擊上方「新增單一主機」或「新增大量主機」開始。
             </div>
             {{end}}
+
+            <div style="margin-left: auto; display: flex; gap: 8px;">
+                <a href="/hosts/export.csv" class="btn btn-secondary btn-sm" hx-boost="false">📤 匯出 CSV</a>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">📥 匯入 CSV</button>
+            </div>
+
+            <!-- CSV Import Modal/Card (Hidden by default) -->
+            <div id="csv-import-box" class="card expandable-panel" style="display: none; background-color: var(--input-bg); margin-bottom: 20px;">
+                <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">📥 匯入 CSV 主機清單</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">貼上 CSV 內容或選擇 .csv 檔案上傳（格式需同匯出欄位）：</p>
+                <textarea name="csv_content" id="csv-text" class="form-control" placeholder="id,name,enabled,provider,domains,proxied,ipv4_enabled,ipv4_mode..."></textarea>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button type="submit" formaction="/hosts/import.csv" class="btn btn-primary btn-sm">開始匯入</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">取消</button>
+                </div>
+            </div>
         </form>
     </div>
 </div>

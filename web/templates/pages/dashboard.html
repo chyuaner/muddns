@@ -78,7 +78,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">網卡介面 (Interface)</label>
-                            <input type="text" name="ipv4_interface" class="form-control" value="{{.EditHost.IPv4.Interface}}" placeholder="eth0">
+                            <input type="text" name="ipv4_interface" class="form-control" value="{{.EditHost.IPv4.Interface}}" placeholder="{{if $.Settings.DefaultIPv4Interface}}{{$.Settings.DefaultIPv4Interface}}{{else}}eth0{{end}}">
                         </div>
                     </div>
                     
@@ -119,7 +119,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">網卡介面 (Interface)</label>
-                            <input type="text" name="ipv6_interface" class="form-control" value="{{.EditHost.IPv6.Interface}}" placeholder="eth0">
+                            <input type="text" name="ipv6_interface" class="form-control" value="{{.EditHost.IPv6.Interface}}" placeholder="{{if $.Settings.DefaultIPv6Interface}}{{$.Settings.DefaultIPv6Interface}}{{else}}eth0{{end}}">
                         </div>
                     </div>
                     
@@ -228,13 +228,13 @@
                                 <div class="grid-2" style="font-size: 0.85rem;">
                                     <div>
                                         <strong style="color: var(--primary);">IPv4 詳細設定:</strong>
-                                        <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else}}eth0{{end}}</code></div>
+                                        <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else if $.Settings.DefaultIPv4Interface}}{{$.Settings.DefaultIPv4Interface}}{{else}}eth0{{end}}</code></div>
                                         <div>參數 / 指令: <code>{{if .IPv4.Match}}{{.IPv4.Match}}{{else if .IPv4.Offset}}{{.IPv4.Offset}}{{else if .IPv4.MAC}}{{.IPv4.MAC}}{{else if .IPv4.Command}}{{.IPv4.Command}}{{else if .IPv4.URL}}{{.IPv4.URL}}{{else}}-{{end}}</code></div>
                                         <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code></div>
                                     </div>
                                     <div>
                                         <strong style="color: var(--primary);">IPv6 詳細設定:</strong>
-                                        <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else}}eth0{{end}}</code></div>
+                                        <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else if $.Settings.DefaultIPv6Interface}}{{$.Settings.DefaultIPv6Interface}}{{else}}eth0{{end}}</code></div>
                                         <div>參數 / 指令: <code>{{if .IPv6.Suffix}}{{.IPv6.Suffix}}{{else if .IPv6.MAC}}{{.IPv6.MAC}}{{else if .IPv6.Match}}{{.IPv6.Match}}{{else if .IPv6.Command}}{{.IPv6.Command}}{{else if .IPv6.URL}}{{.IPv6.URL}}{{else}}-{{end}}</code></div>
                                         <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code></div>
                                     </div>

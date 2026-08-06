@@ -51,6 +51,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		Hosts:        s.cfg.Hosts,
 		GroupedHosts: s.groupHosts(),
 		Providers:    s.cfg.Providers,
+		Settings:     s.cfg.Settings,
 	}
 	s.renderTemplate(w, "dashboard.html", data)
 }
@@ -59,6 +60,15 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHostEdit(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	var host *config.Host
+
+	v4Iface := s.cfg.Settings.DefaultIPv4Interface
+	if v4Iface == "" {
+		v4Iface = "eth0"
+	}
+	v6Iface := s.cfg.Settings.DefaultIPv6Interface
+	if v6Iface == "" {
+		v6Iface = "eth0"
+	}
 
 	if id != "" {
 		for _, h := range s.cfg.Hosts {
@@ -69,12 +79,12 @@ func (s *Server) handleHostEdit(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		// 新增預設範本
+		// 新增預設範本，自動套用全域 settings 所設定的預設網卡介面
 		host = &config.Host{
 			ID:      fmt.Sprintf("host-%d", len(s.cfg.Hosts)+1),
 			Enabled: true,
-			IPv4:    config.IPConfig{Enabled: true, Mode: "external_api"},
-			IPv6:    config.IPConfig{Enabled: true, Mode: "prefix_stitching", Suffix: "::1"},
+			IPv4:    config.IPConfig{Enabled: true, Mode: "external_api", Interface: v4Iface},
+			IPv6:    config.IPConfig{Enabled: true, Mode: "prefix_stitching", Suffix: "::1", Interface: v6Iface},
 		}
 	}
 
@@ -83,6 +93,7 @@ func (s *Server) handleHostEdit(w http.ResponseWriter, r *http.Request) {
 		Hosts:        s.cfg.Hosts,
 		GroupedHosts: s.groupHosts(),
 		Providers:    s.cfg.Providers,
+		Settings:     s.cfg.Settings,
 		EditHost:     host,
 	}
 	s.renderTemplate(w, "dashboard.html", data)
@@ -299,16 +310,26 @@ func (s *Server) syncSingleHost(ctx context.Context, h config.Host) {
 
 // handleHostsBatchAdd 處理批量新增主機頁面渲染 (/hosts/batch-add)
 func (s *Server) handleHostsBatchAdd(w http.ResponseWriter, r *http.Request) {
+	v4Iface := s.cfg.Settings.DefaultIPv4Interface
+	if v4Iface == "" {
+		v4Iface = "eth0"
+	}
+	v6Iface := s.cfg.Settings.DefaultIPv6Interface
+	if v6Iface == "" {
+		v6Iface = "eth0"
+	}
+
 	data := PageData{
 		ActiveTab:           "dashboard",
 		Providers:           s.cfg.Providers,
+		Settings:            s.cfg.Settings,
 		IsBatchEdit:         false,
 		CommonIPv4Enabled:   true,
 		CommonIPv4Mode:      "external_api",
-		CommonIPv4Interface: "eth0",
+		CommonIPv4Interface: v4Iface,
 		CommonIPv6Enabled:   true,
 		CommonIPv6Mode:      "prefix_stitching",
-		CommonIPv6Interface: "eth0",
+		CommonIPv6Interface: v6Iface,
 	}
 	s.renderTemplate(w, "batch_hosts.html", data)
 }

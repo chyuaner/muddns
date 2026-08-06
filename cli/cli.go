@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -50,6 +53,27 @@ func Run(version string) {
 		runStatus(*configPath, filterIface, *debug)
 	case "version":
 		fmt.Printf("muddns 版本: %s\n", version)
+	case "install":
+		runInstallService(*configPath)
+	case "uninstall":
+		runUninstallService()
+	case "service":
+		subCmd := ""
+		if len(os.Args) >= 3 {
+			subCmd = os.Args[2]
+		}
+		switch subCmd {
+		case "install":
+			runInstallService(*configPath)
+		case "uninstall":
+			runUninstallService()
+		case "start", "stop", "restart", "status":
+			runControlService(subCmd)
+		default:
+			fmt.Println("[!] 未知的 service 子指令。可用的服務指令: install, uninstall, start, stop, restart, status")
+			fmt.Println("    範例: sudo ./muddns service install -c /etc/muddns/config.yaml")
+			os.Exit(1)
+		}
 	default:
 		fmt.Printf("[ERROR] 未知的命令: %s\n\n", command)
 		printUsage()
@@ -66,6 +90,9 @@ func printUsage() {
 	fmt.Println("  serve      啟動背景輪詢更新服務並開啟 Web 管理介面")
 	fmt.Println("  sync       執行單次即時 DNS 同步更新 (適合搭配 cron 或 OPNsense WAN 重新連線腳本觸發)")
 	fmt.Println("  status     計算並列出所有主機當前的 IP (乾跑測試，不實際修改 DNS)")
+	fmt.Println("  install    將 muddns 註冊為 Linux Systemd 常駐服務 (同 service install)")
+	fmt.Println("  uninstall  停止並移除 muddns Linux Systemd 常駐服務 (同 service uninstall)")
+	fmt.Println("  service    常駐服務管理 (install, uninstall, start, stop, restart, status)")
 	fmt.Println("  version    顯示 muddns 版本號")
 	fmt.Println("\n常用選項:")
 	fmt.Println("  -c <path>         指定設定檔路徑 (預設: config.yaml)")
@@ -360,5 +387,134 @@ func setupSystemCAs(customCA string, insecureSkip bool) {
 		}
 		tr.TLSClientConfig.RootCAs = caCertPool
 		logger.Log(logger.INFO, "", "已成功載入自訂 CA 憑證: %s", customCA)
+	}
+}
+
+// runInstallService 註冊 Linux Systemd 常駐服務
+func runInstallService(configPath string) {
+	if runtime.GOOS != "linux" {
+		fmt.Println("[!] 目前自動註冊服務功能僅原生支援 Linux Systemd。非 Linux 系統請自行手動設定常駐進程。")
+		os.Exit(1)
+	}
+
+	if os.Geteuid() != 0 {
+		fmt.Println("[!] 錯誤：安裝 Systemd 系統服務需要 root 權限，請加上 sudo 重新執行:")
+		fmt.Printf("    sudo %s service install -c %s\n", os.Args[0], configPath)
+		os.Exit(1)
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		fmt.Printf("[ERROR] 無法取得 muddns 可執行檔路徑: %v\n", err)
+		os.Exit(1)
+	}
+
+	absExecPath, err := filepath.Abs(execPath)
+	if err != nil {
+		fmt.Printf("[ERROR] 無法計算 Executable 絕對路徑: %v\n", err)
+		os.Exit(1)
+	}
+
+	absConfigPath, err := filepath.Abs(configPath)
+	if err != nil {
+		fmt.Printf("[ERROR] 無法計算 設定檔 絕對路徑: %v\n", err)
+		os.Exit(1)
+	}
+
+	workDir := filepath.Dir(absConfigPath)
+
+	serviceContent := fmt.Sprintf(`[Unit]
+Description=muddns - Multi-host DDNS Service
+Documentation=https://github.com/yuan/muddns
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=%s
+ExecStart=%s serve -c %s
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+`, workDir, absExecPath, absConfigPath)
+
+	serviceFilePath := "/etc/systemd/system/muddns.service"
+	err = os.WriteFile(serviceFilePath, []byte(serviceContent), 0644)
+	if err != nil {
+		fmt.Printf("[ERROR] 寫入服務設定檔失敗 (%s): %v\n", serviceFilePath, err)
+		os.Exit(1)
+	}
+
+	fmt.Println("[+] 成功創建 Systemd 服務檔案: " + serviceFilePath)
+
+	_ = exec.Command("systemctl", "daemon-reload").Run()
+	if err := exec.Command("systemctl", "enable", "muddns.service").Run(); err != nil {
+		fmt.Printf("[!] 啟用服務 enable 失敗: %v\n", err)
+	}
+	if err := exec.Command("systemctl", "start", "muddns.service").Run(); err != nil {
+		fmt.Printf("[!] 啟動服務 start 失敗: %v\n", err)
+	} else {
+		fmt.Println("[+] 成功啟動並開啟常駐服務: muddns.service")
+	}
+
+	fmt.Println("\n================================================================================")
+	fmt.Println("  🎉 muddns 常駐服務已安裝並成功啟動！")
+	fmt.Println("================================================================================")
+	fmt.Printf("  • 執行檔路徑 : %s\n", absExecPath)
+	fmt.Printf("  • 設定檔路徑 : %s\n", absConfigPath)
+	fmt.Println("  • 查看服務狀態: systemctl status muddns")
+	fmt.Println("  • 查看服務日誌: journalctl -u muddns -f")
+	fmt.Println("  • 停止服務    : systemctl stop muddns")
+	fmt.Println("  • 卸載常駐服務: sudo ./muddns service uninstall")
+	fmt.Println("================================================================================\n")
+}
+
+// runUninstallService 停止、關閉並移除 Systemd 服務
+func runUninstallService() {
+	if runtime.GOOS != "linux" {
+		fmt.Println("[!] 目前自動註冊服務功能僅原生支援 Linux Systemd。")
+		os.Exit(1)
+	}
+
+	if os.Geteuid() != 0 {
+		fmt.Println("[!] 錯誤：移除 Systemd 系統服務需要 root 權限，請加上 sudo 執行:")
+		fmt.Println("    sudo ./muddns service uninstall")
+		os.Exit(1)
+	}
+
+	serviceFilePath := "/etc/systemd/system/muddns.service"
+
+	fmt.Println("[i] 正在停止與關閉 muddns.service...")
+	_ = exec.Command("systemctl", "stop", "muddns.service").Run()
+	_ = exec.Command("systemctl", "disable", "muddns.service").Run()
+
+	if _, err := os.Stat(serviceFilePath); err == nil {
+		if err := os.Remove(serviceFilePath); err != nil {
+			fmt.Printf("[!] 刪除服務檔 %s 失敗: %v\n", serviceFilePath, err)
+		} else {
+			fmt.Println("[+] 已成功刪除服務檔案: " + serviceFilePath)
+		}
+	}
+
+	_ = exec.Command("systemctl", "daemon-reload").Run()
+	fmt.Println("[+] 已成功解除安裝 muddns 常駐服務。")
+}
+
+// runControlService 管理 Systemd 服務狀態 (start, stop, restart, status)
+func runControlService(action string) {
+	if runtime.GOOS != "linux" {
+		fmt.Println("[!] 僅支援 Linux Systemd。")
+		os.Exit(1)
+	}
+	cmd := exec.Command("systemctl", action, "muddns.service")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("[!] 執行 systemctl %s muddns 失敗: %v\n", action, err)
 	}
 }

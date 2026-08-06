@@ -106,6 +106,38 @@ muddns/
 ./muddns sync -c config.yaml --interface pppoe1
 ```
 
+#### 🌐 HTTP API 遠端觸發介面 (GET / POST /api/sync)
+適合由 OPNsense WAN 重新連線事件 (devd / newwanip) 或遠端 curl 呼叫觸發：
+```bash
+# 1. 觸發更新指定網卡介面 (例如 pppoe1 重新連線時)
+curl -s "http://127.0.0.1:9876/api/sync?interface=pppoe1&auth=5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0"
+
+# 2. 未指定 interface 時，更新全部主機
+curl -s "http://127.0.0.1:9876/api/sync?auth=5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0"
+
+# 3. 亦支援 POST 方法與 Authorization Header 標頭
+curl -X POST "http://127.0.0.1:9876/api/sync" \
+     -H "Authorization: Bearer 5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0" \
+     -d "interface=pppoe1"
+```
+
+#### ⚙️ Linux Systemd 常駐服務安裝 (比照 ddns-go)
+```bash
+# 自動將 muddns 註冊並啟動為 Systemd 常駐服務 (自動帶入絕對路徑)
+sudo ./muddns service install -c /etc/muddns/config.yaml
+
+# 快捷寫法 (同 service install)
+sudo ./muddns install
+
+# 管理服務狀態 (status, start, stop, restart)
+sudo ./muddns service status
+
+# 解除安裝並移除常駐服務
+sudo ./muddns service uninstall
+# 或
+sudo ./muddns uninstall
+```
+
 #### Dry-run 測試與排錯 (計算 IP 但不上傳 DNS)
 ```bash
 # 乾跑計算全部主機 IP

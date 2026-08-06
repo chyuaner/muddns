@@ -42,6 +42,10 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	subStatic, _ := fs.Sub(webFS, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(subStatic))))
 
+	// 外部自動化與 OPNsense WAN 觸發同步 API (支援 GET / POST /api/sync)
+	mux.HandleFunc("GET /api/sync", s.handleAPISync)
+	mux.HandleFunc("POST /api/sync", s.handleAPISync)
+
 	// HTMX 即時預覽 API 與登出
 	mux.HandleFunc("POST /api/preview", s.requireAuth(s.handlePreview))
 	mux.HandleFunc("GET /logout", s.handleLogout)

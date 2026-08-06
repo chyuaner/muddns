@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -886,4 +887,87 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", `Basic realm="muddns"`)
 	http.Error(w, "Logged out", http.StatusUnauthorized)
+}
+
+// handleAPISync 處理 HTTP API GET/POST 觸發同步請求 (/api/sync)
+// 支援網卡過濾 ?interface=pppoe1 與 權限驗證 ?auth=5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0
+func (s *Server) handleAPISync(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	// 1. 檢查 Auth 驗證 Token
+	configuredToken := strings.TrimSpace(s.cfg.Settings.APIAuth)
+	if configuredToken != "" {
+		reqToken := strings.TrimSpace(r.URL.Query().Get("auth"))
+		if reqToken == "" {
+			reqToken = strings.TrimSpace(r.FormValue("auth"))
+		}
+		if reqToken == "" {
+			authHeader := r.Header.Get("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				reqToken = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if reqToken != configuredToken {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Unauthorized: invalid or missing auth token",
+			})
+			return
+		}
+	}
+
+	// 2. 解析可選的 interface 參數
+	targetIface := strings.TrimSpace(r.URL.Query().Get("interface"))
+	if targetIface == "" {
+		targetIface = strings.TrimSpace(r.FormValue("interface"))
+	}
+
+	// 3. 遍歷並篩選主機
+	ctx := context.Background()
+	var syncedHosts []string
+
+	for _, h := range s.cfg.Hosts {
+		if !h.Enabled {
+			continue
+		}
+
+		// 若指定介面，需檢查該主機的 IPv4 或 IPv6 介面是否匹配
+		if targetIface != "" {
+			v4Iface := h.IPv4.Interface
+			if v4Iface == "" {
+				v4Iface = s.cfg.Settings.DefaultIPv4Interface
+			}
+			v6Iface := h.IPv6.Interface
+			if v6Iface == "" {
+				v6Iface = s.cfg.Settings.DefaultIPv6Interface
+			}
+
+			// 如果網卡介面皆不符合，則跳過
+			if v4Iface != targetIface && v6Iface != targetIface {
+				continue
+			}
+		}
+
+		// 觸發同步
+		go s.syncSingleHost(ctx, h)
+		syncedHosts = append(syncedHosts, h.Name+" ("+h.ID+")")
+	}
+
+	msg := fmt.Sprintf("已成功為 %d 台主機觸發 DNS 同步", len(syncedHosts))
+	if targetIface != "" {
+		msg += fmt.Sprintf(" (過濾介面: %s)", targetIface)
+	}
+
+	logger.Log(logger.INFO, "", "HTTP API /api/sync 被呼叫: %s", msg)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":       "success",
+		"message":      msg,
+		"interface":    targetIface,
+		"synced_count": len(syncedHosts),
+		"synced_hosts": syncedHosts,
+	})
 }

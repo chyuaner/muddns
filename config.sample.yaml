@@ -3,6 +3,7 @@ settings:
     interval_seconds: 300
     default_ipv4_interface: eth0
     default_ipv6_interface: eth0
+    apiauth: "5F9KRRh71FRcAYzgr1HSPnRIy02ueVle6ZabR7cua7ca46d0"
     custom_ca_file: ""
     insecure_skip_verify: false
     log_file: ""

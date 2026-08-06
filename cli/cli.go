@@ -425,7 +425,7 @@ func runInstallService(configPath string) {
 
 	serviceContent := fmt.Sprintf(`[Unit]
 Description=muddns - Multi-host DDNS Service
-Documentation=https://github.com/yuan/muddns
+Documentation=https://github.com/chyuaner/muddns
 After=network.target network-online.target
 Wants=network-online.target
 

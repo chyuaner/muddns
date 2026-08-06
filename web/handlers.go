@@ -24,14 +24,8 @@ func (s *Server) renderTemplate(w http.ResponseWriter, name string, data interfa
 	}
 }
 
-// handleDashboard 處理 Dashboard 主控板首頁請求 (/)
-func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	// 將所有主機依 DNS Provider 進行分類群組化
+// groupHosts 將所有主機依 DNS Provider 進行分類群組化
+func (s *Server) groupHosts() map[string][]config.Host {
 	grouped := make(map[string][]config.Host)
 	for _, h := range s.cfg.Hosts {
 		p := h.Provider
@@ -40,11 +34,20 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		grouped[p] = append(grouped[p], h)
 	}
+	return grouped
+}
+
+// handleDashboard 處理 Dashboard 主控板首頁請求 (/)
+func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 
 	data := PageData{
 		ActiveTab:    "dashboard",
 		Hosts:        s.cfg.Hosts,
-		GroupedHosts: grouped,
+		GroupedHosts: s.groupHosts(),
 		Providers:    s.cfg.Providers,
 	}
 	s.renderTemplate(w, "dashboard.html", data)
@@ -74,10 +77,11 @@ func (s *Server) handleHostEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{
-		ActiveTab: "dashboard",
-		Hosts:     s.cfg.Hosts,
-		Providers: s.cfg.Providers,
-		EditHost:  host,
+		ActiveTab:    "dashboard",
+		Hosts:        s.cfg.Hosts,
+		GroupedHosts: s.groupHosts(),
+		Providers:    s.cfg.Providers,
+		EditHost:     host,
 	}
 	s.renderTemplate(w, "dashboard.html", data)
 }

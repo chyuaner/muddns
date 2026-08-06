@@ -13,11 +13,12 @@
     /* 2. 預設深色主題變數 (Dracula / Nord Deep Midnight 漸層) */
     --bg-gradient: linear-gradient(149deg, #282a36, #333445 13%, #353a52 30%, #2c2f3e 53%, #282a36 93%, #3e3647);
     --bg-color: #282a36;
-    --card-bg: rgba(44, 47, 62, 0.85);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --card-header-bg: rgba(162, 189, 140, 0.12);
+    --card-bg: #2c2f3e; /* 不透明實色，防止 Modal 背景穿透 */
+    --dialog-bg: #282a36; /* Modal 對話框專用純實色背景 */
+    --card-border: rgba(255, 255, 255, 0.12);
+    --card-header-bg: rgba(162, 189, 140, 0.15);
     --accent-color: #a2bd8c;
-    --input-bg: #212330;
+    --input-bg: #1e202c;
     --border-color: rgba(255, 255, 255, 0.12);
     --text-color: #e2e8f0;
     --text-muted: #a0aec0;
@@ -28,7 +29,7 @@
     --warning: #ebcb8b;
     --table-header-bg: rgba(255, 255, 255, 0.05);
     --preview-bg: rgba(162, 189, 140, 0.12);
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.25);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 /* 3. 原生 OS 系統設定為 Light Mode 時自動套用 yuaner 經典灰藍光亮漸層 */
@@ -37,7 +38,8 @@
         --bg-gradient: linear-gradient(135deg, #f6f8f9, #e5ebee 50%, #d7dee3 56%, #f5f7f9);
         --bg-color: #f6f8f9;
         --card-bg: #ffffff;
-        --card-border: rgba(0, 0, 0, 0.08);
+        --dialog-bg: #ffffff;
+        --card-border: rgba(0, 0, 0, 0.1);
         --card-header-bg: rgba(94, 129, 172, 0.12);
         --accent-color: #5e81ac;
         --input-bg: #f8fafc;
@@ -51,7 +53,7 @@
         --warning: #d08770;
         --table-header-bg: rgba(94, 129, 172, 0.08);
         --preview-bg: rgba(94, 129, 172, 0.1);
-        --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     }
 }
 
@@ -60,7 +62,8 @@
     --bg-gradient: linear-gradient(135deg, #f6f8f9, #e5ebee 50%, #d7dee3 56%, #f5f7f9) !important;
     --bg-color: #f6f8f9 !important;
     --card-bg: #ffffff !important;
-    --card-border: rgba(0, 0, 0, 0.08) !important;
+    --dialog-bg: #ffffff !important;
+    --card-border: rgba(0, 0, 0, 0.1) !important;
     --card-header-bg: rgba(94, 129, 172, 0.12) !important;
     --accent-color: #5e81ac !important;
     --input-bg: #f8fafc !important;
@@ -74,18 +77,19 @@
     --warning: #d08770 !important;
     --table-header-bg: rgba(94, 129, 172, 0.08) !important;
     --preview-bg: rgba(94, 129, 172, 0.1) !important;
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
 }
 
 /* 5. 使用者手動切換指定 [data-theme="dark"] 覆蓋 */
 [data-theme="dark"] {
     --bg-gradient: linear-gradient(149deg, #282a36, #333445 13%, #353a52 30%, #2c2f3e 53%, #282a36 93%, #3e3647) !important;
     --bg-color: #282a36 !important;
-    --card-bg: rgba(44, 47, 62, 0.85) !important;
-    --card-border: rgba(255, 255, 255, 0.08) !important;
-    --card-header-bg: rgba(162, 189, 140, 0.12) !important;
+    --card-bg: #2c2f3e !important;
+    --dialog-bg: #282a36 !important;
+    --card-border: rgba(255, 255, 255, 0.12) !important;
+    --card-header-bg: rgba(162, 189, 140, 0.15) !important;
     --accent-color: #a2bd8c !important;
-    --input-bg: #212330 !important;
+    --input-bg: #1e202c !important;
     --border-color: rgba(255, 255, 255, 0.12) !important;
     --text-color: #e2e8f0 !important;
     --text-muted: #a0aec0 !important;
@@ -96,7 +100,7 @@
     --warning: #ebcb8b !important;
     --table-header-bg: rgba(255, 255, 255, 0.05) !important;
     --preview-bg: rgba(162, 189, 140, 0.12) !important;
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
 }
 
 /* 將頁面背景設定為 yuaner 經典漸層背景 */

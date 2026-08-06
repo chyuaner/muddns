@@ -2,14 +2,14 @@
 <div class="container">
 
 {{if .EditHost}}
-    <!-- Single Host Edit View -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">{{if .EditHost.ID}}編輯主機: {{.EditHost.Name}}{{else}}新增主機{{end}}</h2>
-            <a href="/" class="btn btn-secondary btn-sm">返回總覽</a>
+    <!-- Single Host Edit Dialog (HTML5 Modal with No-JS Fallback) -->
+    <dialog id="host-modal" class="card host-dialog" open>
+        <div class="modal-header">
+            <h3>{{if .EditHost.ID}}✏️ 編輯主機: {{.EditHost.Name}}{{else}}➕ 新增單一主機{{end}}</h3>
+            <button type="button" class="btn-close" onclick="closeHostModal()" title="關閉對話框">✕</button>
         </div>
         
-        <form action="/hosts/save" method="POST">
+        <form action="/hosts/save" method="POST" style="padding: 20px;">
             <input type="hidden" name="id" value="{{.EditHost.ID}}">
             
             <div class="grid-2">
@@ -53,9 +53,9 @@
             <hr style="border-color: var(--border-color); margin: 20px 0;">
             
             <!-- IPv4 Strategy Section -->
-            <div class="card" style="background-color: var(--input-bg);">
+            <div class="card" style="background-color: var(--input-bg); padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h3 style="font-size: 1rem; color: var(--primary);">IPv4 設定策略</h3>
+                    <h3 style="font-size: 1rem; color: var(--primary); margin: 0;">IPv4 設定策略</h3>
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <label style="cursor: pointer; font-size: 0.85rem;">
                             <input type="checkbox" name="ipv4_enabled" value="true" {{if .EditHost.IPv4.Enabled}}checked{{end}} onchange="togglePseudoDisabled('ipv4-card-body', this.checked)"> 啟用 IPv4
@@ -64,7 +64,7 @@
                     </div>
                 </div>
 
-                <div id="ipv4-card-body" class="{{if not .EditHost.IPv4.Enabled}}pseudo-disabled{{end}}">
+                <div id="ipv4-card-body" class="expandable-panel {{if not .EditHost.IPv4.Enabled}}pseudo-disabled{{end}}">
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">IPv4 模式 (Mode)</label>
@@ -94,9 +94,9 @@
             </div>
             
             <!-- IPv6 Strategy Section -->
-            <div class="card" style="background-color: var(--input-bg);">
+            <div class="card" style="background-color: var(--input-bg); padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h3 style="font-size: 1rem; color: var(--primary);">IPv6 設定策略</h3>
+                    <h3 style="font-size: 1rem; color: var(--primary); margin: 0;">IPv6 設定策略</h3>
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <label style="cursor: pointer; font-size: 0.85rem;">
                             <input type="checkbox" name="ipv6_enabled" value="true" {{if .EditHost.IPv6.Enabled}}checked{{end}} onchange="togglePseudoDisabled('ipv6-card-body', this.checked)"> 啟用 IPv6
@@ -105,7 +105,7 @@
                     </div>
                 </div>
 
-                <div id="ipv6-card-body" class="{{if not .EditHost.IPv6.Enabled}}pseudo-disabled{{end}}">
+                <div id="ipv6-card-body" class="expandable-panel {{if not .EditHost.IPv6.Enabled}}pseudo-disabled{{end}}">
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">IPv6 模式 (Mode)</label>
@@ -134,14 +134,14 @@
                 </div>
             </div>
             
-            <div style="margin-top: 20px; display: flex; gap: 12px;">
+            <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeHostModal()">取消</button>
                 <button type="submit" class="btn btn-primary">💾 儲存主機設定</button>
-                <a href="/" class="btn btn-secondary">取消</a>
             </div>
         </form>
-    </div>
+    </dialog>
+{{end}}
 
-{{else}}
     <!-- Main Dashboard View with Provider Grouping and CSV Import/Export -->
     <div class="card">
         <form action="/hosts/batch" method="POST" id="batch-form">
@@ -149,19 +149,19 @@
                 <a href="/hosts/edit?id=" class="btn btn-primary">+ 新增單一主機</a>
                 <a href="/hosts/batch-add" class="btn btn-primary">➕ 新增大量主機</a>
                 <button type="submit" formaction="/hosts/batch-edit" id="btn-batch-edit" class="btn btn-secondary" disabled>✏️ 批量編輯</button>
-                <button type="submit" name="action" value="sync" class="btn btn-secondary">⚡ 批量立即同步</button>
+                <button type="submit" name="action" value="sync" class="btn btn-secondary">⚡ 批量區域同步</button>
                 <button type="submit" name="action" value="enable" class="btn btn-secondary">✅ 批量啟用</button>
                 <button type="submit" name="action" value="disable" class="btn btn-secondary">⛔ 批量關閉</button>
                 <button type="submit" name="action" value="delete" class="btn btn-danger" onclick="return confirm('確定要刪除選取的主機嗎？')">🗑️ 批量刪除</button>
                 
                 <div style="margin-left: auto; display: flex; gap: 8px;">
-                    <a href="/hosts/export.csv" class="btn btn-secondary btn-sm">📤 匯出 CSV</a>
+                    <a href="/hosts/export.csv" class="btn btn-secondary btn-sm" hx-boost="false">📤 匯出 CSV</a>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="toggleCsvImportModal()">📥 匯入 CSV</button>
                 </div>
             </div>
 
             <!-- CSV Import Modal/Card (Hidden by default) -->
-            <div id="csv-import-box" class="card" style="display: none; background-color: var(--input-bg); margin-bottom: 20px;">
+            <div id="csv-import-box" class="card expandable-panel" style="display: none; background-color: var(--input-bg); margin-bottom: 20px;">
                 <h3 style="font-size: 1rem; margin-bottom: 8px; color: var(--primary);">📥 匯入 CSV 主機清單</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">貼上 CSV 內容或選擇 .csv 檔案上傳（格式需同匯出欄位）：</p>
                 <textarea name="csv_content" id="csv-text" class="form-control" placeholder="id,name,enabled,provider,domains,proxied,ipv4_enabled,ipv4_mode..."></textarea>
@@ -197,7 +197,7 @@
                         </tr>
 
                         {{range $providerHosts}}
-                        <tr class="group-row-{{$providerID}}">
+                        <tr class="group-row-{{$providerID}} expandable-row">
                             <td><input type="checkbox" name="host_ids" value="{{.ID}}" data-provider="{{.Provider}}" onchange="checkBatchEditStatus()"></td>
                             <td>
                                 {{if .Enabled}}
@@ -237,7 +237,7 @@
                             </td>
                         </tr>
                         <!-- Expandable Detail Row -->
-                        <tr id="detail-{{.ID}}" class="group-row-{{$providerID}}" style="display: none; background-color: var(--input-bg);">
+                        <tr id="detail-{{.ID}}" class="group-row-{{$providerID}} expandable-row" style="display: none; background-color: var(--input-bg);">
                             <td colspan="7" style="padding: 16px;">
                                 <div class="grid-2" style="font-size: 0.85rem;">
                                     <div>
@@ -267,11 +267,32 @@
             {{end}}
         </form>
     </div>
-{{end}}
-
 </div>
 
 <script>
+// 初始化 HTML5 <dialog> 對話框（若為 Modal 模式）
+(function initHostModal() {
+    var modal = document.getElementById('host-modal');
+    if (!modal) return;
+    if (typeof modal.showModal === 'function') {
+        modal.removeAttribute('open');
+        modal.showModal();
+    }
+})();
+
+function closeHostModal() {
+    var modal = document.getElementById('host-modal');
+    if (modal && typeof modal.close === 'function') {
+        modal.close();
+    } else if (modal) {
+        modal.style.display = 'none';
+    }
+    if (window.history && window.history.pushState) {
+        window.history.pushState({}, '', '/');
+    }
+}
+
+// 可滑順動畫展開/收合 Provider 群組
 function toggleTableGroup(providerId, headerRow) {
     var rows = document.querySelectorAll('.group-row-' + providerId);
     var icon = headerRow.querySelector('.group-toggle-icon');
@@ -285,28 +306,41 @@ function toggleTableGroup(providerId, headerRow) {
                 r.style.display = 'none';
             } else {
                 r.style.display = 'table-row';
+                r.style.opacity = '1';
             }
         });
     } else {
         headerRow.classList.add('collapsed');
         if (icon) icon.innerText = '►';
         rows.forEach(function(r) {
-            r.style.display = 'none';
+            r.style.opacity = '0';
+            setTimeout(function() {
+                if (headerRow.classList.contains('collapsed')) {
+                    r.style.display = 'none';
+                }
+            }, 150);
         });
     }
 }
 
+// 可滑順動畫展開/收合單一主機詳細資料
 function toggleHostDetail(rowId, btn) {
     var row = document.getElementById(rowId);
     if (!row) return;
     if (row.style.display === 'none') {
         row.style.display = 'table-row';
+        row.style.opacity = '0';
+        setTimeout(function() { row.style.opacity = '1'; }, 10);
         btn.innerText = '▲ 收合';
     } else {
-        row.style.display = 'none';
-        btn.innerText = '▼ 展開';
+        row.style.opacity = '0';
+        setTimeout(function() {
+            row.style.display = 'none';
+            btn.innerText = '▼ 展開';
+        }, 150);
     }
 }
+
 function togglePseudoDisabled(elementId, isChecked) {
     var el = document.getElementById(elementId);
     if (!el) return;
@@ -322,15 +356,25 @@ function toggleCollapse(elementId) {
     if (!el) return;
     if (el.style.display === 'none') {
         el.style.display = 'block';
+        el.style.opacity = '0';
+        setTimeout(function() { el.style.opacity = '1'; }, 10);
     } else {
-        el.style.display = 'none';
+        el.style.opacity = '0';
+        setTimeout(function() { el.style.display = 'none'; }, 150);
     }
 }
 
 function toggleCsvImportModal() {
     var box = document.getElementById('csv-import-box');
     if (!box) return;
-    box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    if (box.style.display === 'none') {
+        box.style.display = 'block';
+        box.style.opacity = '0';
+        setTimeout(function() { box.style.opacity = '1'; }, 10);
+    } else {
+        box.style.opacity = '0';
+        setTimeout(function() { box.style.display = 'none'; }, 150);
+    }
 }
 
 function checkBatchEditStatus() {

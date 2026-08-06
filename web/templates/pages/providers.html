@@ -2,13 +2,14 @@
 <div class="container">
 
 {{if .EditProvider}}
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">{{if .EditProviderID}}編輯 DNS 服務商: {{.EditProviderID}}{{else}}新增 DNS 服務商{{end}}</h2>
-            <a href="/providers" class="btn btn-secondary btn-sm">返回服務商列表</a>
+    <!-- Provider Edit Dialog (HTML5 Modal with No-JS Fallback) -->
+    <dialog id="provider-modal" class="card host-dialog" open>
+        <div class="modal-header">
+            <h3>{{if .EditProviderID}}✏️ 編輯 DNS 服務商: {{.EditProviderID}}{{else}}➕ 新增 DNS 服務商{{end}}</h3>
+            <button type="button" class="btn-close" onclick="closeProviderModal()" title="關閉對話框">✕</button>
         </div>
         
-        <form action="/providers/save" method="POST">
+        <form action="/providers/save" method="POST" style="padding: 20px;">
             <input type="hidden" name="old_id" value="{{.EditProviderID}}">
             
             <div class="grid-2">
@@ -76,14 +77,15 @@
                 </div>
             </div>
             
-            <div style="margin-top: 20px; display: flex; gap: 12px;">
+            <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="closeProviderModal()">取消</button>
                 <button type="submit" class="btn btn-primary">💾 儲存 DNS 服務商</button>
-                <a href="/providers" class="btn btn-secondary">取消</a>
             </div>
         </form>
-    </div>
-    
-{{else}}
+    </dialog>
+{{end}}
+
+    <!-- Always Render Provider Table List in Container -->
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">🔌 DNS 服務商清單 (DNS Providers)</h2>
@@ -133,7 +135,30 @@
             </table>
         </div>
     </div>
-{{end}}
-
 </div>
+
+<script>
+// 初始化 HTML5 <dialog> 對話框
+(function initProviderModal() {
+    var modal = document.getElementById('provider-modal');
+    if (!modal) return;
+    if (typeof modal.showModal === 'function') {
+        modal.removeAttribute('open');
+        modal.showModal();
+    }
+})();
+
+function closeProviderModal() {
+    var modal = document.getElementById('provider-modal');
+    if (modal && typeof modal.close === 'function') {
+        modal.close();
+    } else if (modal) {
+        modal.style.display = 'none';
+    }
+    if (window.history && window.history.pushState) {
+        window.history.pushState({}, '', '/providers');
+    }
+}
+</script>
+
 {{template "footer" .}}

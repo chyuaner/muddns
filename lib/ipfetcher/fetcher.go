@@ -36,7 +36,11 @@ func ResolveIP(ipCfg config.IPConfig, isIPv6 bool, defaults []string, hostID str
 	switch ipCfg.Mode {
 	case "external_api":
 		// 使用外網 API 查詢 IP
-		return FetchExternalIP(ipCfg.URL, isIPv6, defaults, hostID)
+		iface := ipCfg.Interface
+		if iface == "" {
+			iface = fallbackIface
+		}
+		return FetchExternalIP(ipCfg.URL, isIPv6, defaults, hostID, iface)
 
 	case "command":
 		// 執行自訂 Bash 指令並解析 stdout 為 IP

@@ -42,3 +42,9 @@ func TestFetchInterfaceIP_Fallback(t *testing.T) {
 		t.Errorf("獲得空的 IPv4 地址")
 	}
 }
+
+func TestFetchExternalIP_InterfaceBinding(t *testing.T) {
+	// 驗證帶有 interface 參數的 FetchExternalIP 調用不會出錯
+	defaults := []string{"https://api.ipify.org"}
+	_, _ = FetchExternalIP("", false, defaults, "test-host", "lo")
+}

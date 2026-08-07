@@ -7,14 +7,15 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"muddns/lib/logger"
 )
 
 // FetchExternalIP 透過外網 HTTP Echo API 查詢公網 IP
-// 支援指定單一 URL 或嘗試預設備援 API 列表，若遇到失敗或非 IP 內容會自動重試備援 API
-func FetchExternalIP(customURL string, isIPv6 bool, defaults []string, hostID string) (string, error) {
+// 支援指定單一 URL 或嘗試預設備援 API 列表，若有指定 ifaceName 則會將 TCP 連線綁定至該網卡出站 (用於雙 WAN / 多網卡環境)
+func FetchExternalIP(customURL string, isIPv6 bool, defaults []string, hostID string, ifaceName ...string) (string, error) {
 	var targetURLs []string
 
 	// 如果使用者指定了自訂 URL 放在首位，備援 API 放在後續
@@ -27,8 +28,42 @@ func FetchExternalIP(customURL string, isIPv6 bool, defaults []string, hostID st
 		return "", fmt.Errorf("沒有可用的外部 API URL")
 	}
 
+	dialer := &net.Dialer{
+		Timeout: 5 * time.Second,
+	}
+
+	if len(ifaceName) > 0 && strings.TrimSpace(ifaceName[0]) != "" {
+		rawIface := strings.TrimSpace(ifaceName[0])
+		cleanIface := rawIface
+		if idx := strings.Index(rawIface, "@"); idx != -1 {
+			cleanIface = rawIface[:idx]
+		}
+
+		// 嘗試取得網卡本地 IP 作為 LocalAddr
+		if localIPStr, err := FetchInterfaceIP(cleanIface, "", isIPv6); err == nil && localIPStr != "" {
+			if ip := net.ParseIP(localIPStr); ip != nil {
+				dialer.LocalAddr = &net.TCPAddr{IP: ip}
+			}
+		}
+
+		// 設定 Linux SO_BINDTODEVICE 控制 (針對雙 WAN 多介面路由)
+		dialer.Control = func(network, address string, c syscall.RawConn) error {
+			var bindErr error
+			err := c.Control(func(fd uintptr) {
+				bindErr = bindSocketToDevice(fd, cleanIface)
+			})
+			if err != nil {
+				return err
+			}
+			return bindErr
+		}
+	}
+
 	client := &http.Client{
-		Timeout: 5 * time.Second, // 避免請求卡住，設定 5 秒超時
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			DialContext: dialer.DialContext,
+		},
 	}
 
 	var lastErr error

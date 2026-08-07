@@ -12,6 +12,8 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /", s.requireAuth(s.handleDashboard))
 	mux.HandleFunc("GET /hosts/edit", s.requireAuth(s.handleHostEdit))
 	mux.HandleFunc("POST /hosts/save", s.requireAuth(s.handleHostSave))
+	mux.HandleFunc("GET /hosts/sync-single", s.requireAuth(s.handleHostSyncSingle))
+	mux.HandleFunc("POST /hosts/sync-single", s.requireAuth(s.handleHostSyncSingle))
 
 	// 批量主機操作與大量新增/編輯
 	mux.HandleFunc("POST /hosts/batch", s.requireAuth(s.handleHostBatch))

@@ -107,11 +107,20 @@ header {
     }
 }
 
-/* 核心容器 (Main Container) */
+/* 核心容器 (Main Container - 流體伸縮流暢排版，對齊 mx-auto p-4 md:p-8 彈性間距) */
 .container {
-    max-width: 1200px;
-    margin: 24px auto;
-    padding: 0 16px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 20px;
+    margin-bottom: 32px;
+    padding: 1rem; /* p-4 (16px) */
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding: 1.5rem 2rem; /* md:p-8 (32px) */
+    }
 }
 
 /* 卡片與區塊 (Cards & Panels - 對齊 yuaner-general-page 的 status-panel 外觀) */
@@ -247,6 +256,14 @@ td {
     padding: 12px 14px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-color);
+}
+
+tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+tbody tr:hover:not(.table-group-header) {
+    background-color: var(--table-row-hover-bg, rgba(255, 255, 255, 0.05));
 }
 
 tr:last-child td { border-bottom: none; }

@@ -46,12 +46,41 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 從 System Logs (全域 Log 緩衝區) 動態提取每台主機最新記錄的 IPv4 / IPv6 檢測與更新時間
+	updatedMap := make(map[string]string)
+	for _, h := range s.cfg.Hosts {
+		logs := logger.GlobalRingBuffer.GetLogs(h.ID, "")
+		for _, l := range logs {
+			if l.Level == logger.SUCCESS || l.Level == logger.INFO {
+				if strings.Contains(l.Message, "IPv4") || strings.Contains(l.Message, " RecordA ") || strings.Contains(l.Message, " A ") {
+					if _, exists := updatedMap[h.ID+"_v4"]; !exists {
+						updatedMap[h.ID+"_v4"] = l.Timestamp
+					}
+				}
+				if strings.Contains(l.Message, "IPv6") || strings.Contains(l.Message, " RecordAAAA ") || strings.Contains(l.Message, " AAAA ") {
+					if _, exists := updatedMap[h.ID+"_v6"]; !exists {
+						updatedMap[h.ID+"_v6"] = l.Timestamp
+					}
+				}
+			}
+		}
+		if len(logs) > 0 {
+			if _, exists := updatedMap[h.ID+"_v4"]; !exists {
+				updatedMap[h.ID+"_v4"] = logs[0].Timestamp
+			}
+			if _, exists := updatedMap[h.ID+"_v6"]; !exists {
+				updatedMap[h.ID+"_v6"] = logs[0].Timestamp
+			}
+		}
+	}
+
 	data := PageData{
-		ActiveTab:    "dashboard",
-		Hosts:        s.cfg.Hosts,
-		GroupedHosts: s.groupHosts(),
-		Providers:    s.cfg.Providers,
-		Settings:     s.cfg.Settings,
+		ActiveTab:      "dashboard",
+		Hosts:          s.cfg.Hosts,
+		GroupedHosts:   s.groupHosts(),
+		HostUpdatedMap: updatedMap,
+		Providers:      s.cfg.Providers,
+		Settings:       s.cfg.Settings,
 	}
 	s.renderTemplate(w, "dashboard.html", data)
 }
@@ -267,7 +296,35 @@ func (s *Server) handleHostBatch(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// syncSingleHost 背景非同步更新單一主機 DNS
+// handleHostSyncSingle 處理單一主機「手動立即更新」請求 (/hosts/sync-single)
+func (s *Server) handleHostSyncSingle(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.URL.Query().Get("id"))
+	if id == "" {
+		id = strings.TrimSpace(r.FormValue("id"))
+	}
+	if id == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	ctx := context.Background()
+	foundName := ""
+	for i, h := range s.cfg.Hosts {
+		if h.ID == id {
+			foundName = h.Name
+			s.syncSingleHost(ctx, s.cfg.Hosts[i])
+			break
+		}
+	}
+
+	if foundName != "" {
+		logger.Log(logger.INFO, id, "已手動觸發主機 [%s] (%s) 的即時 IP 檢測與 DNS 同步", foundName, id)
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// syncSingleHost 更新單一主機 DNS 並紀錄快取 IP
 func (s *Server) syncSingleHost(ctx context.Context, h config.Host) {
 	pConfig, ok := s.cfg.Providers[h.Provider]
 	if !ok {
@@ -282,10 +339,16 @@ func (s *Server) syncSingleHost(ctx context.Context, h config.Host) {
 	}
 
 	if h.IPv4.Enabled {
-		ip4, err := ipfetcher.ResolveIP(h.IPv4, false, s.cfg.Defaults.IPv4APIs, h.ID)
+		ip4, err := ipfetcher.ResolveIP(h.IPv4, false, s.cfg.Defaults.IPv4APIs, h.ID, s.cfg.Settings.DefaultIPv4Interface)
 		if err != nil {
 			logger.Log(logger.ERROR, h.ID, "計算 IPv4 失敗: %v", err)
 		} else {
+			for i, hostRef := range s.cfg.Hosts {
+				if hostRef.ID == h.ID {
+					s.cfg.Hosts[i].IPv4.LastIP = ip4
+					break
+				}
+			}
 			for _, domain := range h.Domains {
 				if err := p.UpdateRecord(ctx, domain, provider.RecordA, ip4, h.Proxied); err != nil {
 					logger.Log(logger.ERROR, h.ID, "更新 A 紀錄 %s 失敗: %v", domain, err)
@@ -295,10 +358,16 @@ func (s *Server) syncSingleHost(ctx context.Context, h config.Host) {
 	}
 
 	if h.IPv6.Enabled {
-		ip6, err := ipfetcher.ResolveIP(h.IPv6, true, s.cfg.Defaults.IPv6APIs, h.ID)
+		ip6, err := ipfetcher.ResolveIP(h.IPv6, true, s.cfg.Defaults.IPv6APIs, h.ID, s.cfg.Settings.DefaultIPv6Interface)
 		if err != nil {
 			logger.Log(logger.ERROR, h.ID, "計算 IPv6 失敗: %v", err)
 		} else {
+			for i, hostRef := range s.cfg.Hosts {
+				if hostRef.ID == h.ID {
+					s.cfg.Hosts[i].IPv6.LastIP = ip6
+					break
+				}
+			}
 			for _, domain := range h.Domains {
 				if err := p.UpdateRecord(ctx, domain, provider.RecordAAAA, ip6, h.Proxied); err != nil {
 					logger.Log(logger.ERROR, h.ID, "更新 AAAA 紀錄 %s 失敗: %v", domain, err)
@@ -306,6 +375,8 @@ func (s *Server) syncSingleHost(ctx context.Context, h config.Host) {
 			}
 		}
 	}
+
+	s.cfg.Save(s.configPath)
 }
 
 // handleHostsBatchAdd 處理批量新增主機頁面渲染 (/hosts/batch-add)

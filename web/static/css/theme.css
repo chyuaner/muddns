@@ -17,6 +17,7 @@
     --danger: #f87171;
     --warning: #fbbf24;
     --table-header-bg: rgba(0, 0, 0, 0.2);
+    --table-row-hover-bg: rgba(255, 255, 255, 0.06);
     --preview-bg: rgba(56, 189, 248, 0.1);
 }
 
@@ -35,6 +36,7 @@
         --danger: #dc2626;
         --warning: #d97706;
         --table-header-bg: #f1f5f9;
+        --table-row-hover-bg: rgba(2, 132, 199, 0.08);
         --preview-bg: rgba(2, 132, 199, 0.08);
     }
 }
@@ -53,6 +55,7 @@
     --danger: #dc2626;
     --warning: #d97706;
     --table-header-bg: #f1f5f9;
+    --table-row-hover-bg: rgba(2, 132, 199, 0.08);
     --preview-bg: rgba(2, 132, 199, 0.08);
 }
 
@@ -70,5 +73,6 @@
     --danger: #f87171;
     --warning: #fbbf24;
     --table-header-bg: rgba(0, 0, 0, 0.2);
+    --table-row-hover-bg: rgba(255, 255, 255, 0.06);
     --preview-bg: rgba(56, 189, 248, 0.1);
 }

@@ -148,13 +148,12 @@
             <div class="toolbar">
                 <a href="/hosts/edit?id=" class="btn btn-primary">+ 新增單一主機</a>
                 <a href="/hosts/batch-add" class="btn btn-primary">➕ 新增大量主機</a>
+                <a href="/" class="btn btn-secondary" title="重新整理頁面並刷新當前狀態">🔄 重新整理</a>
                 <button type="submit" formaction="/hosts/batch-edit" id="btn-batch-edit" class="btn btn-secondary" disabled>✏️ 批量編輯</button>
                 <button type="submit" name="action" value="sync" class="btn btn-secondary">⚡ 批量區域同步</button>
                 <button type="submit" name="action" value="enable" class="btn btn-secondary">✅ 批量啟用</button>
                 <button type="submit" name="action" value="disable" class="btn btn-secondary">⛔ 批量關閉</button>
                 <button type="submit" name="action" value="delete" class="btn btn-danger" onclick="return confirm('確定要刪除選取的主機嗎？')">🗑️ 批量刪除</button>
-                
-
             </div>
             
             {{if .Hosts}}
@@ -183,6 +182,8 @@
                         </tr>
 
                         {{range $providerHosts}}
+                        {{$v4Time := index $.HostUpdatedMap (print .ID "_v4")}}
+                        {{$v6Time := index $.HostUpdatedMap (print .ID "_v6")}}
                         <tr class="group-row-{{$providerID}} expandable-row">
                             <td><input type="checkbox" name="host_ids" value="{{.ID}}" data-provider="{{.Provider}}" onchange="checkBatchEditStatus()"></td>
                             <td>
@@ -202,6 +203,9 @@
                                 {{if .IPv4.Enabled}}
                                 <span class="badge badge-warning">{{.IPv4.Mode}}</span>
                                 <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}-{{end}}</div>
+                                {{if $v4Time}}
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" title="最後更新時間 (自 System Logs)">🕒 {{$v4Time}}</div>
+                                {{end}}
                                 {{else}}
                                 <span class="badge badge-muted">未啟用</span>
                                 {{end}}
@@ -210,12 +214,16 @@
                                 {{if .IPv6.Enabled}}
                                 <span class="badge badge-warning">{{.IPv6.Mode}}</span>
                                 <div style="font-family: monospace; font-size: 0.85rem;">{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}-{{end}}</div>
+                                {{if $v6Time}}
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" title="最後更新時間 (自 System Logs)">🕒 {{$v6Time}}</div>
+                                {{end}}
                                 {{else}}
                                 <span class="badge badge-muted">未啟用</span>
                                 {{end}}
                             </td>
                             <td>
-                                <div style="display: flex; gap: 6px;">
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    <a href="/hosts/sync-single?id={{.ID}}" class="btn btn-primary btn-sm" title="立即為此主機執行 IP 檢測與 DNS 同步">⚡ 立即更新</a>
                                     <button type="button" class="btn btn-secondary btn-sm js-only" onclick="toggleHostDetail('detail-{{.ID}}', this)">▼ 展開</button>
                                     <a href="/hosts/edit?id={{.ID}}" class="btn btn-secondary btn-sm">編輯</a>
                                     <a href="/logs?host_id={{.ID}}" class="btn btn-secondary btn-sm">📜 日誌</a>
@@ -230,13 +238,13 @@
                                         <strong style="color: var(--primary);">IPv4 詳細設定:</strong>
                                         <div>狀態: {{if .IPv4.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv4.Mode}}</code> | 介面: <code>{{if .IPv4.Interface}}{{.IPv4.Interface}}{{else if $.Settings.DefaultIPv4Interface}}{{$.Settings.DefaultIPv4Interface}}{{else}}eth0{{end}}</code></div>
                                         <div>參數 / 指令: <code>{{if .IPv4.Match}}{{.IPv4.Match}}{{else if .IPv4.Offset}}{{.IPv4.Offset}}{{else if .IPv4.MAC}}{{.IPv4.MAC}}{{else if .IPv4.Command}}{{.IPv4.Command}}{{else if .IPv4.URL}}{{.IPv4.URL}}{{else}}-{{end}}</code></div>
-                                        <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                        <div>最新預覽/算得 IP: <code>{{if .IPv4.LastIP}}{{.IPv4.LastIP}}{{else}}無紀錄{{end}}</code> {{if $v4Time}}<span style="color: var(--text-muted); font-size: 0.8rem;">(🕒 {{$v4Time}})</span>{{end}}</div>
                                     </div>
                                     <div>
                                         <strong style="color: var(--primary);">IPv6 詳細設定:</strong>
                                         <div>狀態: {{if .IPv6.Enabled}}<span class="badge badge-success">啟用</span>{{else}}<span class="badge badge-muted">停用</span>{{end}} | 模式: <code>{{.IPv6.Mode}}</code> | 介面: <code>{{if .IPv6.Interface}}{{.IPv6.Interface}}{{else if $.Settings.DefaultIPv6Interface}}{{$.Settings.DefaultIPv6Interface}}{{else}}eth0{{end}}</code></div>
                                         <div>參數 / 指令: <code>{{if .IPv6.Suffix}}{{.IPv6.Suffix}}{{else if .IPv6.MAC}}{{.IPv6.MAC}}{{else if .IPv6.Match}}{{.IPv6.Match}}{{else if .IPv6.Command}}{{.IPv6.Command}}{{else if .IPv6.URL}}{{.IPv6.URL}}{{else}}-{{end}}</code></div>
-                                        <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code></div>
+                                        <div>最新預覽/算得 IP: <code>{{if .IPv6.LastIP}}{{.IPv6.LastIP}}{{else}}無紀錄{{end}}</code> {{if $v6Time}}<span style="color: var(--text-muted); font-size: 0.8rem;">(🕒 {{$v6Time}})</span>{{end}}</div>
                                     </div>
                                 </div>
                             </td>

@@ -20,6 +20,7 @@ type PageData struct {
 	ActiveTab           string                     `json:"active_tab"`            // 當前啟用的頁籤 (dashboard, providers, config_raw, logs, settings)
 	Hosts               []config.Host              `json:"hosts"`                 // 所有主機清單
 	GroupedHosts        map[string][]config.Host   `json:"grouped_hosts"`         // 依 Provider 分組的主機清單
+	HostUpdatedMap      map[string]string          `json:"host_updated_map"`      // 動態自 Log 提取的最後成功更新時間 (hostID_v4 / hostID_v6 -> timestamp)
 	Providers           map[string]config.Provider `json:"providers"`             // 所有註冊的 DNS 服務商 Key-Value 對
 	EditHost            *config.Host               `json:"edit_host"`             // 當前單一編輯的主機
 	EditProvider        *config.Provider           `json:"edit_provider"`         // 當前單一編輯的 Provider

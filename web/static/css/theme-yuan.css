@@ -28,6 +28,7 @@
     --danger: #bf616a;
     --warning: #ebcb8b;
     --table-header-bg: rgba(255, 255, 255, 0.05);
+    --table-row-hover-bg: rgba(255, 255, 255, 0.07);
     --preview-bg: rgba(162, 189, 140, 0.12);
     --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
@@ -52,6 +53,7 @@
         --danger: #bf616a;
         --warning: #d08770;
         --table-header-bg: rgba(94, 129, 172, 0.08);
+        --table-row-hover-bg: rgba(94, 129, 172, 0.12);
         --preview-bg: rgba(94, 129, 172, 0.1);
         --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     }
@@ -76,6 +78,7 @@
     --danger: #bf616a !important;
     --warning: #d08770 !important;
     --table-header-bg: rgba(94, 129, 172, 0.08) !important;
+    --table-row-hover-bg: rgba(94, 129, 172, 0.12) !important;
     --preview-bg: rgba(94, 129, 172, 0.1) !important;
     --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
 }
@@ -99,6 +102,7 @@
     --danger: #bf616a !important;
     --warning: #ebcb8b !important;
     --table-header-bg: rgba(255, 255, 255, 0.05) !important;
+    --table-row-hover-bg: rgba(255, 255, 255, 0.08) !important;
     --preview-bg: rgba(162, 189, 140, 0.12) !important;
     --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
 }
